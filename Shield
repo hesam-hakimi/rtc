@@ -1,159 +1,276 @@
-You are continuing the active CLUE deployment work. This is not a new project and must not be treated as a fresh analysis.
+Continue the active CLUE deployment documentation work. This is not a new project.
 
-Your task is to complete and update the latest version of:
+You have read access to an attached Confluence-compatible file. Treat that attachment as the primary technical and visual template for this task.
+
+Objective
+
+Create a polished Confluence-compatible HTML page containing the complete and latest CLUE PAT and Production deployment handoff.
+
+Use the latest available revision of:
 
 CLUE_PAT_PROD_Deployment_Change_Order_and_Handoff_2026-09-27.docx
 
-Primary objective
+The Word document is the primary content source. The attached Confluence file is the primary formatting, structure and compatibility reference.
 
-Read the entire Word document, identify every TBD, PENDING, placeholder, unresolved decision, and incomplete command, and populate as much as possible using verified current project evidence.
+Step 1 — Inspect the attachment first
 
-Use your existing CLUE project memory and conversation context to locate relevant information, but do not treat memory alone as authoritative. Verify important or changeable values against the latest available documents, repository content, artifact evidence, screenshots, meeting records, environment YAML files, installer help output, and target-host evidence.
+Before generating anything:
 
-Update the document itself. Do not only produce a report describing what should be changed.
+1. List and inspect the attached files.
+2. Identify the Confluence file by examining its content, not merely its filename.
+3. Read the complete file.
+4. Determine whether it is:
+    * Confluence-exported HTML
+    * Confluence Storage Format XHTML
+    * A page template
+    * A browser-saved Confluence page
+    * Or another Confluence-compatible representation
+5. Identify:
+    * HTML/XHTML structure
+    * Confluence namespaces
+    * Structured macros
+    * Panel and status implementations
+    * Table conventions
+    * Expand and code-block conventions
+    * Existing CSS and supported classes
+    * Relative assets
+    * Character encoding
+    * Cloud or Data Center indicators
+6. Use the detected format instead of inventing a generic Confluence format.
 
-Sources to review
+If screenshots are also attached, use them as visual references for spacing, color, table density and section hierarchy.
 
-Before editing, locate and review the latest available versions of:
+Do not modify the original attachment.
 
-1. The current Word document.
-2. /CLUE Project Reference/00_START_HERE.md
-3. /CLUE Project Reference/01_CURRENT_STATE.json
-4. The latest CLUE Operational Deployment Handbook.
-5. The latest CLUE Implementation Reference.
-6. The latest Implementation Phases and Acceptance document.
-7. The September 27 deployment walkthrough transcript.
-8. The PAT/Production server and NPID access matrix.
-9. The latest Route 3 installer and runtime-secrets implementation evidence.
-10. The current deployment package documentation, especially CLUE_OPERATIONAL_DEPLOYMENT.md.
-11. The current clue_install_release.sh --help output and supported arguments.
-12. The final environment YAML files for PAT and Production.
-13. Current Nexus publication or build evidence.
-14. Current access, Lifecycle, folder-creation, ownership and sudoers tickets.
-15. Any newer evidence available in project memory, conversation history, repository files, or uploaded screenshots.
+Step 2 — Read the complete CLUE source
 
-When two sources conflict, use this priority order:
+Read the latest Word document from beginning to end.
 
-1. Approved Change Order and target-host evidence
-2. Current published artifact and its packaged documentation
-3. Current repository implementation
-4. Latest dated project reference documents
-5. Meeting transcript
-6. Screenshots
-7. Agent memory
+Also use the latest available CLUE project evidence and active project context to verify content, including:
 
-Record material conflicts instead of silently choosing a value.
+* Current-state reference
+* Operational Deployment Handbook
+* Implementation Reference
+* Implementation Phases and Acceptance document
+* September 27 deployment walkthrough
+* Server and NPID matrix
+* Route 3 installer and runtime-secret evidence
+* Current artifact and Nexus information
+* Environment YAML files
+* Access, Lifecycle and Change Order information
 
-Fields that must be investigated
+Existing project memory may be used to locate information, but memory alone is not sufficient evidence for changeable facts.
 
-Attempt to complete all of the following:
+Content rules
 
-* Exact PAT and Production hostnames and IP mappings
-* Canonical PAT and Production NPID spelling from getent
-* Required Unix groups and confirmed group membership
-* Access and Lifecycle ticket numbers mapped to the correct environment
-* Exact PAT and Production Change Order windows
-* Named implementer, root executor, technical validator, business validator and escalation contacts
-* Final approved release identifier
-* Exact immutable Nexus artifact URL
-* Artifact filename, byte size and full SHA-256
-* Source commit, build ID or source revision
-* Approved temporary download and extraction root
-* Exact PAT and Production runtime-data paths from the current environment YAML
-* Input, processing, output, completed/archive and log paths for encrypted and non-encrypted processing
-* Python interpreter, virtual environment and dependency source
-* Exact Route A bootstrap/download command
-* Exact PAT installation command
-* Exact Production installation command
-* Exact dry-run forms
-* Approved first-install and upgrade backout procedures
-* Root-required stage execution model
-* Bounded sudoers installation and validation procedure
-* Server restart/outage decision
-* AutoSys information, if it is now confirmed and relevant to the first deployment
+Preserve all meaningful content from the Word document, including:
 
-Mandatory technical constraints
+* Document control and revision
+* Deployment decisions
+* Readiness status
+* Environment and identity matrix
+* Roles and responsibilities
+* Timeline and entry criteria
+* Artifact and Nexus contract
+* Folder and permission contract
+* Salt Pillar and sudoers contract
+* Installer stages and exit categories
+* Implementation procedure
+* Validation and evidence
+* Backout procedure
+* Failure handling
+* PAT execution worksheet
+* Production execution worksheet
+* Open decisions and owner actions
+* Exact command appendices
+* Change Order field set
 
-Preserve these rules unless newer verified evidence explicitly supersedes them:
+Do not omit operational, security, validation, ownership or backout information to make the page shorter.
+
+Evidence classification
+
+Display the following statuses consistently:
+
+* VERIFIED
+* REPORTED — VERIFY ON HOST
+* PROPOSED
+* PENDING
+* BLOCKER
+* NOT SCHEDULED
+
+Do not present TBD, reported, inferred or remembered values as verified.
+
+Every unresolved value must show:
+
+* Missing value or decision
+* Owner
+* Required-by date
+* Affected environment
+* Evidence required for closure
+
+Required visual structure
+
+Build a polished enterprise-style page using the design conventions discovered in the attached Confluence file.
+
+The page should include:
+
+1. Title and document metadata
+2. Authorization notice
+3. Executive deployment decision
+4. Readiness dashboard
+5. Prominent P0 blocker panel
+6. Environment and identity matrix
+7. Roles and responsibilities
+8. Schedule and PAT entry criteria
+9. Artifact and Nexus contract
+10. Folder and permission contract
+11. Salt Pillar and sudoers security section
+12. Installer stage flow
+13. Change Order implementation plan
+14. Validation and evidence requirements
+15. Backout and failure handling
+16. PAT execution worksheet
+17. Production execution worksheet
+18. Open decisions and owner actions
+19. Expandable technical appendices
+20. Evidence sources and revision history
+
+Use the attached file’s native components for:
+
+* Table of contents
+* Information panels
+* Warning and error panels
+* Status indicators
+* Expandable sections
+* Code blocks
+* Tables
+* Checklists
+* Anchors and navigation
+
+Visual design expectations
+
+The output must be attractive but operationally professional:
+
+* Clear section hierarchy
+* Consistent spacing
+* Dark blue primary headings
+* Light blue informational areas
+* Green verified states
+* Amber pending states
+* Red or muted coral blockers
+* Gray reported or informational states
+* Accessible contrast
+* Consistent table headers
+* Readable command blocks
+* Print-friendly layout
+
+P0 blockers and critical warnings must remain visible without opening an expandable section.
+
+Detailed commands and appendices may be placed in expandable sections.
+
+Mandatory technical rules
+
+Preserve these requirements unless newer authoritative evidence supersedes them:
 
 * Application root is /app/clue.
-* PAT and Production must use the approved Nexus/installer Route A.
-* Developer-only Route B must not be used.
-* Do not use the historical f676277 DEV rehearsal artifact for PAT or Production.
-* Ownership of /app/clue or NAS directories does not grant root or sudo authority.
+* PAT and Production use the approved Nexus and installer Route A.
+* Developer Route B is excluded.
+* The historical f676277 DEV rehearsal artifact must not be used for PAT or Production.
+* Directory ownership does not provide root or sudo authority.
 * Do not authorize NOPASSWD: ALL.
-* Do not authorize a shell, su, wildcard salt-call, or unrestricted root access as the CLUE application requirement.
-* Runtime-secret access must remain bounded to the exact approved salt-call pillar.get commands.
-* /etc/sudoers.d/clue-runtime-secrets must remain root:root with mode 0440 and pass candidate and full visudo validation.
-* Do not expose Pillar values, PEM material, credentials, tokens or private keys in the document, commands, logs, screenshots or evidence.
-* Installation smoke validation must use /usr/bin/true and must not contact Symcor or Tungsten.
-* Do not invent runtime directories. Copy exact physical paths from the final environment YAML and approved infrastructure ticket.
-* Do not claim that the server requires no restart unless current Lifecycle or approved Change Order evidence confirms it.
-* Do not claim the artifact is ready for PAT merely because the source code is marked READY_FOR_ARTIFACT_BUILD.
+* Do not authorize a shell, su, wildcard salt-call or unrestricted root access.
+* Runtime-secret sudoers access must remain limited to the exact approved Pillar retrieval commands.
+* /etc/sudoers.d/clue-runtime-secrets remains root:root mode 0440.
+* Candidate and full visudo validation are required.
+* No Pillar values, credentials, PEM material, tokens or private keys may appear.
+* Installation smoke uses /usr/bin/true.
+* Installation smoke must not contact Symcor or Tungsten.
+* Physical runtime paths must come from the final environment YAML and infrastructure evidence.
+* Do not state that no restart is required unless current Lifecycle or Change Order evidence confirms it.
 
-Evidence discipline
+Confluence compatibility
 
-Classify every populated value as one of:
+Follow the syntax and compatibility model found in the attached file.
 
-* VERIFIED — supported by current authoritative evidence
-* REPORTED — VERIFY ON HOST — transcribed from a meeting or screenshot
-* PROPOSED — recommended but not yet approved
-* TBD — OWNER: <team/person> — evidence is still unavailable
+Do not add technologies that the template does not already support.
 
-Never convert a reported, inferred or remembered value into a verified fact.
+Unless explicitly supported by the attachment, do not use:
 
-If a value cannot be confirmed:
+* JavaScript
+* External CSS
+* External fonts
+* External libraries
+* Iframes
+* SVG or canvas
+* Custom web components
+* Complex forms
+* Remote images
+* Hover-only content
+* Unsupported CSS layout features
 
-1. Keep it visibly unresolved.
-2. State exactly what evidence is missing.
-3. Assign the correct owner.
-4. State when it is required.
-5. Mark whether it blocks PAT, Production, or neither.
+If the attachment is Confluence Storage Format:
 
-Editing requirements
+* Preserve the required namespaces.
+* Produce well-formed XHTML.
+* Use native Confluence structured macros.
+* Do not add <html>, <head> or <body> wrappers unless they exist in the template and are required by its format.
+* Escape XML characters correctly.
 
-* Preserve the existing professional English structure and styling.
-* Update the document revision from R1 to R2.
-* Add a revision-history entry summarizing the completed fields and remaining blockers.
-* Update all duplicated values consistently throughout the document.
-* Update the readiness tables, environment sheets, open-decisions table and Change Order field set.
-* Replace placeholders only when sufficient evidence exists.
-* Preserve execution checklists and blank result/evidence cells intended to be completed during deployment.
-* Do not remove cautions merely to make the document appear complete.
-* Use exact copyable commands, not screenshots or paraphrased command fragments.
-* Use ISO dates and clearly identify the timezone for change windows.
-* Keep PAT and Production values separated.
+If the attachment is an exported standalone HTML page:
 
-Required validation
+* Reuse its safe page structure and styles.
+* Preserve required relative assets or embed them locally.
+* Remove irrelevant page IDs, user information, comments, navigation chrome and environment-specific metadata.
+* Do not copy unrelated content from the reference page.
 
-After editing:
+Output
 
-1. Search the complete document for:
+Create:
+
+CLUE_PAT_PROD_Deployment_Handoff_Confluence.html
+
+If the attached reference uses Storage Format, also create:
+
+CLUE_PAT_PROD_Deployment_Handoff_Confluence_Storage.xhtml
+
+Create a short import note only if a separate import procedure is required:
+
+CLUE_PAT_PROD_Deployment_Handoff_Confluence_Import.md
+
+Do not generate redundant versions when the attached file already establishes the correct target format.
+
+Validation
+
+Before completion:
+
+1. Compare every major section against the Word document.
+2. Confirm that no required content was lost.
+3. Search for:
     * TBD
     * PENDING
     * TO CONFIRM
     * PASTE EXACT
-    * placeholder brackets such as <...>
-2. Confirm that every remaining occurrence is intentional and has an owner.
-3. Check that host, NPID, release, artifact and path values are consistent across all sections.
-4. Confirm that no secret material appears anywhere.
-5. Render the complete Word document and visually inspect every page.
-6. Correct clipped text, split tables, footer collisions, malformed commands and isolated headings.
-7. Run structural and accessibility validation if available.
+    * Placeholder values
+4. Confirm every remaining placeholder is intentional and assigned.
+5. Validate HTML or XHTML syntax.
+6. Confirm all commands preserve their exact characters and line continuations.
+7. Confirm no secret values are included.
+8. Open and visually inspect the complete generated page.
+9. Check wide and narrow browser widths where applicable.
+10. Check tables, code blocks, panels, expand sections and navigation.
+11. Confirm blockers are immediately visible.
+12. Compare the visual result with the attached Confluence reference.
 
-Deliverables
+Final response
 
 Return:
 
-1. The completed Word document, preferably as a new version of the existing file. If version replacement is unavailable, name it:
-    CLUE_PAT_PROD_Deployment_Change_Order_and_Handoff_2026-09-27-R2.docx
-2. A concise completion report containing:
-    * Sources reviewed and their versions/dates
-    * Fields newly completed
-    * Values changed from R1 and the supporting evidence
-    * Remaining PAT blockers
-    * Remaining Production blockers
-    * Exact unresolved questions and their owners
-    * Document render/validation result
+* The generated file or files
+* The specific attached file used as the Confluence reference
+* The detected Confluence format
+* A concise summary of the resulting page
+* Validation results
+* Remaining unresolved content gaps
+* Any limitation that requires verification in the actual target Confluence environment
 
-Do not state that the document is complete, the artifact is approved, or PAT is ready unless the evidence supports that conclusion.
+Do not claim that the page was successfully published to Confluence unless it was actually imported and rendered in the target Confluence space.
