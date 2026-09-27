@@ -1,0 +1,159 @@
+You are continuing the active CLUE deployment work. This is not a new project and must not be treated as a fresh analysis.
+
+Your task is to complete and update the latest version of:
+
+CLUE_PAT_PROD_Deployment_Change_Order_and_Handoff_2026-09-27.docx
+
+Primary objective
+
+Read the entire Word document, identify every TBD, PENDING, placeholder, unresolved decision, and incomplete command, and populate as much as possible using verified current project evidence.
+
+Use your existing CLUE project memory and conversation context to locate relevant information, but do not treat memory alone as authoritative. Verify important or changeable values against the latest available documents, repository content, artifact evidence, screenshots, meeting records, environment YAML files, installer help output, and target-host evidence.
+
+Update the document itself. Do not only produce a report describing what should be changed.
+
+Sources to review
+
+Before editing, locate and review the latest available versions of:
+
+1. The current Word document.
+2. /CLUE Project Reference/00_START_HERE.md
+3. /CLUE Project Reference/01_CURRENT_STATE.json
+4. The latest CLUE Operational Deployment Handbook.
+5. The latest CLUE Implementation Reference.
+6. The latest Implementation Phases and Acceptance document.
+7. The September 27 deployment walkthrough transcript.
+8. The PAT/Production server and NPID access matrix.
+9. The latest Route 3 installer and runtime-secrets implementation evidence.
+10. The current deployment package documentation, especially CLUE_OPERATIONAL_DEPLOYMENT.md.
+11. The current clue_install_release.sh --help output and supported arguments.
+12. The final environment YAML files for PAT and Production.
+13. Current Nexus publication or build evidence.
+14. Current access, Lifecycle, folder-creation, ownership and sudoers tickets.
+15. Any newer evidence available in project memory, conversation history, repository files, or uploaded screenshots.
+
+When two sources conflict, use this priority order:
+
+1. Approved Change Order and target-host evidence
+2. Current published artifact and its packaged documentation
+3. Current repository implementation
+4. Latest dated project reference documents
+5. Meeting transcript
+6. Screenshots
+7. Agent memory
+
+Record material conflicts instead of silently choosing a value.
+
+Fields that must be investigated
+
+Attempt to complete all of the following:
+
+* Exact PAT and Production hostnames and IP mappings
+* Canonical PAT and Production NPID spelling from getent
+* Required Unix groups and confirmed group membership
+* Access and Lifecycle ticket numbers mapped to the correct environment
+* Exact PAT and Production Change Order windows
+* Named implementer, root executor, technical validator, business validator and escalation contacts
+* Final approved release identifier
+* Exact immutable Nexus artifact URL
+* Artifact filename, byte size and full SHA-256
+* Source commit, build ID or source revision
+* Approved temporary download and extraction root
+* Exact PAT and Production runtime-data paths from the current environment YAML
+* Input, processing, output, completed/archive and log paths for encrypted and non-encrypted processing
+* Python interpreter, virtual environment and dependency source
+* Exact Route A bootstrap/download command
+* Exact PAT installation command
+* Exact Production installation command
+* Exact dry-run forms
+* Approved first-install and upgrade backout procedures
+* Root-required stage execution model
+* Bounded sudoers installation and validation procedure
+* Server restart/outage decision
+* AutoSys information, if it is now confirmed and relevant to the first deployment
+
+Mandatory technical constraints
+
+Preserve these rules unless newer verified evidence explicitly supersedes them:
+
+* Application root is /app/clue.
+* PAT and Production must use the approved Nexus/installer Route A.
+* Developer-only Route B must not be used.
+* Do not use the historical f676277 DEV rehearsal artifact for PAT or Production.
+* Ownership of /app/clue or NAS directories does not grant root or sudo authority.
+* Do not authorize NOPASSWD: ALL.
+* Do not authorize a shell, su, wildcard salt-call, or unrestricted root access as the CLUE application requirement.
+* Runtime-secret access must remain bounded to the exact approved salt-call pillar.get commands.
+* /etc/sudoers.d/clue-runtime-secrets must remain root:root with mode 0440 and pass candidate and full visudo validation.
+* Do not expose Pillar values, PEM material, credentials, tokens or private keys in the document, commands, logs, screenshots or evidence.
+* Installation smoke validation must use /usr/bin/true and must not contact Symcor or Tungsten.
+* Do not invent runtime directories. Copy exact physical paths from the final environment YAML and approved infrastructure ticket.
+* Do not claim that the server requires no restart unless current Lifecycle or approved Change Order evidence confirms it.
+* Do not claim the artifact is ready for PAT merely because the source code is marked READY_FOR_ARTIFACT_BUILD.
+
+Evidence discipline
+
+Classify every populated value as one of:
+
+* VERIFIED — supported by current authoritative evidence
+* REPORTED — VERIFY ON HOST — transcribed from a meeting or screenshot
+* PROPOSED — recommended but not yet approved
+* TBD — OWNER: <team/person> — evidence is still unavailable
+
+Never convert a reported, inferred or remembered value into a verified fact.
+
+If a value cannot be confirmed:
+
+1. Keep it visibly unresolved.
+2. State exactly what evidence is missing.
+3. Assign the correct owner.
+4. State when it is required.
+5. Mark whether it blocks PAT, Production, or neither.
+
+Editing requirements
+
+* Preserve the existing professional English structure and styling.
+* Update the document revision from R1 to R2.
+* Add a revision-history entry summarizing the completed fields and remaining blockers.
+* Update all duplicated values consistently throughout the document.
+* Update the readiness tables, environment sheets, open-decisions table and Change Order field set.
+* Replace placeholders only when sufficient evidence exists.
+* Preserve execution checklists and blank result/evidence cells intended to be completed during deployment.
+* Do not remove cautions merely to make the document appear complete.
+* Use exact copyable commands, not screenshots or paraphrased command fragments.
+* Use ISO dates and clearly identify the timezone for change windows.
+* Keep PAT and Production values separated.
+
+Required validation
+
+After editing:
+
+1. Search the complete document for:
+    * TBD
+    * PENDING
+    * TO CONFIRM
+    * PASTE EXACT
+    * placeholder brackets such as <...>
+2. Confirm that every remaining occurrence is intentional and has an owner.
+3. Check that host, NPID, release, artifact and path values are consistent across all sections.
+4. Confirm that no secret material appears anywhere.
+5. Render the complete Word document and visually inspect every page.
+6. Correct clipped text, split tables, footer collisions, malformed commands and isolated headings.
+7. Run structural and accessibility validation if available.
+
+Deliverables
+
+Return:
+
+1. The completed Word document, preferably as a new version of the existing file. If version replacement is unavailable, name it:
+    CLUE_PAT_PROD_Deployment_Change_Order_and_Handoff_2026-09-27-R2.docx
+2. A concise completion report containing:
+    * Sources reviewed and their versions/dates
+    * Fields newly completed
+    * Values changed from R1 and the supporting evidence
+    * Remaining PAT blockers
+    * Remaining Production blockers
+    * Exact unresolved questions and their owners
+    * Document render/validation result
+
+Do not state that the document is complete, the artifact is approved, or PAT is ready unless the evidence supports that conclusion.
