@@ -1,22 +1,174 @@
-Owner clarification: for this DEV installation test only, an interactive sudo password prompt is authorized.
+Before I follow Deliverables/docs/CLUE_OPERATIONAL_DEPLOYMENT.md, perform a strict read-only runbook-to-code audit.
 
-Use the existing interactive VS Code terminal with a real TTY. Run the normal delegated command as tclue999devs without -n, pause when the terminal displays the password prompt, and allow me to type the password directly into the terminal.
+Do not install, extract into /app/clue, request a password, invoke sudo interactively, retrieve secrets, contact providers, edit files, rebuild the artifact, publish, commit, push, reset, stash or clean anything.
 
-Security requirements:
+Evidence to inspect
 
-* Never ask me to send or paste the password into chat.
-* Do not read, capture, print, log, repeat or store the password.
-* Do not use sudo -S, stdin piping, echo, environment variables, files, SUDO_ASKPASS, expect or sshpass.
-* Do not open a root shell, change sudoers or broaden privileges.
-* If sudo policy still denies the exact delegated command after authentication, stop and report the denial.
+Compare the current runbook against:
 
-After successful interactive authentication:
+* Deliverables/deploy/clue_install_release.sh
+* Deliverables/deploy/clue_preinstall_check.sh
+* Deliverables/deploy/clue_operational_wrapper.sh
+* Deliverables/config/deployment_env_conf/dev.conf
+* Deliverables/config/deployment_env_conf/pat.conf
+* Deliverables/config/deployment_env_conf/prod.conf
+* Deliverables/config/environments/dev.yaml
+* Deliverables/config/environments/pat.yaml
+* Deliverables/config/environments/prod.yaml
+* relevant Python environment/runtime loaders and entry points;
+* installer, wrapper and documentation tests;
+* the exact artifact already transferred to the DEV host.
 
-1. Reconfirm the checksum of the exact artifact already staged on the DEV host.
-2. Run the documented installer as tclue999devs.
-3. Install to /app/clue for environment dev.
-4. Complete the previously blocked installation, active-environment, installed-runtime and provider-gate tests.
-5. Do not retrieve real secrets or call Symcor or Tungsten.
-6. Do not rebuild or transfer another artifact unless an implementation defect requires a source fix.
+Confirm that the transferred artifact checksum still matches the locally built artifact before treating packaged files as evidence.
 
-This is a manual DEV-test exception only. Do not claim passwordless, unattended or AutoSys readiness. Retain the passwordless prerequisite as an operational blocker until either an exact NOPASSWD delegation exists or AutoSys runs directly as tclue999devs.
+Required audit method
+
+For every executable step in the runbook, produce a table containing:
+
+1. runbook section and command;
+2. corresponding script/function and line reference;
+3. required starting state;
+4. expected behavior;
+5. expected exit code;
+6. whether it mutates anything;
+7. verdict:
+    * MATCH
+    * PARTIAL_MATCH
+    * CONTRADICTION
+    * STALE_DOCUMENTATION
+    * NOT_PROVEN
+8. smallest required correction.
+
+Do not treat an existing test as sufficient evidence by itself. Trace the actual code path and confirm that the packaged artifact contains the same implementation.
+
+Questions that must be answered explicitly
+
+Acquisition and bootstrap
+
+* For a first installation, how does the operator obtain the archive and installer?
+* Confirm that environment profiles cannot be read before the archive is downloaded or otherwise received and safely staged.
+* Determine whether the installer itself performs Nexus resolution/download, or whether the pasted bootstrap block performs it before the installer exists.
+* Reconstruct the exact real order:
+    environment/version selection → download or supplied archive → checksum/archive validation → safe staging → profile loading → preflight → installation.
+* Check whether the hard-coded NEXUS_BASE in the runbook matches code/configuration and supports both snapshots and promoted releases.
+* Confirm the current artifact filename, version and SHA-256. Flag every example still using 1.1.3-SNAPSHOT or an obsolete filename.
+
+Identity and interactive DEV exception
+
+The normal product contract remains passwordless and uses exact sudo -n delegation.
+
+For this one manual DEV installation test, the owner is willing to type the sudo password directly into a real interactive terminal. Determine, without executing installation, whether this exact approach is supported:
+
+sudo -u tclue999devs -- <staged-installer> <documented arguments>
+
+Confirm whether starting the installer this way makes it enter direct mode as tclue999devs and avoids its internal sudo -n delegated path.
+
+Do not assume this works. Trace the code and verify:
+
+* installer path and archive are readable/executable by tclue999devs;
+* required environment variables survive or are passed explicitly;
+* TMP_ROOT is writable;
+* checksum arguments remain intact;
+* the command does not become root;
+* no internal identity check rejects it;
+* dry-run and real-install commands differ only as documented.
+
+The password must never be accepted through chat, stdin piping, sudo -S, environment variables, files, SUDO_ASKPASS, expect or sshpass.
+
+Do not modify the main runbook to describe interactive-password installation as the normal procedure. If code supports it, propose a separately labelled “manual DEV test exception” command.
+
+Existing installation and marker migration
+
+The current /app/clue predates config/active_environment.
+
+Trace what happens when the new installer replaces this legacy tree:
+
+* Can it safely back up an installation that has no marker?
+* Can installation proceed while the old wrapper fails closed?
+* What marker is placed into the new tree?
+* Can rollback to the legacy backup work without incorrectly relabelling its environment?
+* Does this require an explicit migration or first-upgrade rule?
+
+Do not permit the real installation until this case is proven safe.
+
+Environment profiles and runtime behavior
+
+* Verify that copying DEV/PAT/Production profiles does not activate all three.
+* Verify that the installer writes exactly one config/active_environment.
+* Confirm marker = deployment profile = CLUE_ENV = RUNTIME_CONFIG target = YAML environment.
+* Compare the runbook environment table with current profiles. Distinguish confirmed NPID/host/root values from only the still-unconfirmed PAT/Production Tungsten endpoint values.
+* Check whether statements claiming PAT/Production host or account values are unconfirmed are now stale.
+* Confirm CLI environment and NPID values are assertions, not overrides.
+
+Offline versus live execution
+
+* Verify the exact DEV offline-validation command.
+* Confirm whether DEV still has provider_mode: fixtures.
+* If so, state clearly that section 1.8 proves only offline fixture execution and cannot prove live Symcor/Tungsten readiness.
+* Identify the separate supported operational command for live-provider execution.
+* Confirm whether installed live execution requires the runtime-secret wrapper and cannot silently fall back to fixtures, .env or arbitrary process credentials.
+* Do not perform a real provider or secret call.
+
+Administrative prerequisites and secrets
+
+Resolve the apparent contradiction between:
+
+* the one-time bootstrap section saying an administrator provisions /etc/sudoers.d/clue-runtime-secrets; and
+* the internal stage table saying the installer “installs and validates” it.
+
+Trace the code and state exactly:
+
+* which mode may create or modify the sudoers file;
+* whether a normal NPID/non-root install only validates a pre-existing rule;
+* whether any ordinary installation step unexpectedly requires root;
+* what happens when the rule is absent.
+
+Remaining contract
+
+Verify against code:
+
+* preflight status and exit codes;
+* dry-run non-mutation;
+* lock acquisition and cleanup;
+* safe archive validation;
+* rootless extraction layout;
+* ownership and mode checks;
+* dependency installation;
+* active-marker validation;
+* failure restoration;
+* same-environment rollback;
+* cross-environment rollback refusal;
+* recovery commands;
+* documented exit-code table.
+
+Permitted verification
+
+You may run only demonstrably non-mutating local checks such as:
+
+* syntax checks;
+* --help;
+* test collection;
+* focused documentation/contract tests;
+* safe archive listing;
+* checksum comparison;
+* source and packaged-file comparisons.
+
+A remote preflight or dry-run may be used only after its code path is proven non-mutating. Do not invoke any command that can prompt for a password during this audit.
+
+Final output
+
+Return:
+
+1. the complete step-by-step compatibility matrix;
+2. every mismatch, stale value and unresolved claim;
+3. the exact corrected DEV operator sequence supported by current code;
+4. a separate proposed interactive-password DEV-test command, only if code proves it safe;
+5. a list of documentation corrections and code corrections, kept separate;
+6. one final verdict:
+
+* RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED
+* RUNBOOK_PARTIALLY_MATCHES_CORRECTIONS_REQUIRED
+* RUNBOOK_CONTRADICTS_CODE_DO_NOT_PROCEED
+* INSUFFICIENT_EVIDENCE_DO_NOT_PROCEED
+
+Do not edit anything yet. I will review the audit before authorizing documentation changes or installation.
