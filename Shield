@@ -1,183 +1,152 @@
-Continue from the current reconciled working tree. Do not restart the project or restore older whole-file versions.
+Investigate how the current CLUE application selects and validates its runtime environment. This is a read-only code investigation, not an implementation or repair task.
 
-Maintain exactly one workspace writer. Continue the existing Manager → Developer → Independent Tester workflow, but serialize all modifications and tests.
+Use English for all engineering output.
 
-Phase 1 — Verify the latest repairs before making new changes
+Strict boundaries
 
-First, make no additional implementation edits.
+* Do not edit, create, delete, restore, format, or rewrite any repository file.
+* Do not commit, push, fetch, merge, rebase, stash, reset, checkout, open/update a PR, build an artifact, publish, install, or deploy.
+* Do not mutate /app/clue or any server location.
+* Do not contact Salt/Pillar, Vault, Symcor, Tungsten, Nexus, or any other external provider.
+* Do not request, read, expose, or test passwords or real secret values.
+* Do not “fix” a defect even if the correction appears obvious.
+* Do not overwrite or reconcile concurrent working-tree changes.
+* Report findings in chat only; do not create a report file.
+* Treat the current working tree—not only HEAD—as the implementation under investigation.
 
-Run fresh instances of the complete supported suites containing:
+First: establish the evidence baseline
 
-test_install_release.py
-test_operational_wrapper.py
+Run read-only commands to record:
 
-The previous state:
+* repository root;
+* current branch and full HEAD;
+* upstream relationship;
+* concise Git status;
+* relevant tracked and untracked files.
 
-120 passed, 3 failed
+Do not alter the Git state. Capture the same concise status again at the end and confirm that this investigation introduced no changes.
 
-is not accepted evidence because the final three fixes had not been rerun.
+Investigation question
 
-Report:
+Determine whether the main CLUE application—not only the installer, operational wrapper, documentation, or tests—has a single central runtime-configuration loader that reliably selects the installed environment.
 
-* exact commands;
-* exit codes;
-* passed/failed/skipped counts;
-* every remaining failure;
-* whether any file changed during execution.
+The presence of dev.yaml, pat.yaml, and prod.yaml is not proof that such a loader exists. Trace actual executable code.
 
-If a failure remains:
+Do not assume the application entry point is named batches.py; identify the real production entry point, including whether it is clue.batch, batch.py, another module, or a shell wrapper.
 
-1. Tester reports the exact reproducible failure.
-2. Manager creates one bounded work item.
-3. Developer makes the smallest correction.
-4. Tester reruns both complete suites from a fresh process.
+Trace the complete runtime path
 
-Repeat until both suites have zero failures.
+Search the current implementation for all definitions and consumers of at least:
 
-Do not weaken, delete, skip or rename a test merely to obtain a pass.
+* active_environment
+* RUNTIME_CONFIG
+* CLUE_ENV
+* --environment
+* dev.yaml, pat.yaml, prod.yaml
+* deployment profiles under config/deployment_env_conf
+* YAML loading and environment-variable expansion
+* envsettings.py
+* batch.py and the actual Python module entry point
+* clue_operational_wrapper.sh
+* clue_install_release.sh
+* Tungsten and Symcor endpoint/configuration resolution
 
-Phase 2 — Verify active-environment behavior
+Produce an exact call/data-flow trace from process startup to the point where provider clients receive their configuration.
 
-After Phase 1 is green, create and run the dedicated active-environment tests.
+For every step, identify:
 
-Verify that installation writes exactly one marker:
+* exact file and line;
+* function, class, or shell section;
+* input received;
+* output produced;
+* validation performed;
+* fallback or default behavior;
+* whether the behavior is application code, wrapper behavior, installer behavior, documentation, or test-only behavior.
 
-<active-installed-tree>/config/active_environment
+Questions that must be answered from code evidence
 
-The only permitted values are:
+1. Is there one central Python configuration loader used by the real application?
+2. What is its exact file, symbol, and caller chain?
+3. Does Python read config/active_environment itself?
+4. If not, does the wrapper read the marker and pass RUNTIME_CONFIG, CLUE_ENV, or another value to Python?
+5. What exact file path is used for the installed marker, and is it resolved relative to the active installed release rather than the current working directory?
+6. How is the selected deployment .conf associated with the corresponding YAML?
+7. Does the application verify that all applicable environment identities agree?
+    * installed marker;
+    * selected deployment profile;
+    * CLUE_ENV;
+    * RUNTIME_CONFIG;
+    * YAML environment;
+    * optional CLI --environment.
+8. What happens if any of those values is:
+    * missing;
+    * empty;
+    * unknown;
+    * malformed;
+    * contradictory;
+    * a symlink where a regular marker is required?
+9. What happens when an operator runs the Python application directly, such as python -m clue.batch, without the operational wrapper?
+10. Is there any implicit DEV default that could make PAT or Production run with DEV configuration?
+11. Can a CLI flag or environment variable silently override the installed environment and cross an environment boundary?
+12. Are Tungsten and Symcor endpoints taken exclusively from the selected environment configuration?
+13. Are runtime secrets kept separate from environment selection and retrieved only after environment validation?
+14. Do every real batch execution path and subcommand use the same loader, or can any path bypass it?
+15. Is local/fixture execution explicitly separated from installed DEV/PAT/Production execution?
+16. Does rollback restore the previous active-environment marker with the previous release?
+17. Are PAT and Production blocked safely while their tungsten_base_url values remain UNCONFIRMED, without treating that external input gap as a code defect?
 
-dev
-pat
-prod
+Preserve the owner-confirmed DEV, PAT, and Production identity, host, and /app/clue values exactly as found. Do not “correct” or normalize them.
 
-Prove:
+Evidence from tests
 
-* DEV writes and loads dev;
-* PAT writes and loads pat;
-* Production writes and loads prod;
-* all three profiles may be installed, but only the marked profile is active;
-* --environment is an assertion and cannot override the marker;
-* missing, empty, unknown, padded, multi-line and symlinked markers fail closed;
-* profile CLUE_ENV must match the marker;
-* RUNTIME_CONFIG must remain beneath the active installed tree;
-* runtime YAML environment must match the marker;
-* rollback restores the previous marker and matching configuration;
-* validation happens before Pillar retrieval or provider activity.
+Inspect existing tests to determine which of the above behaviors are actually covered. Distinguish clearly among:
 
-Phase 3 — Close the main-application environment gap
+* behavior proved directly by production code;
+* behavior covered by a test;
+* behavior mentioned only in documentation;
+* behavior currently untested;
+* behavior absent from the implementation.
 
-Do not stop after proving the installer and wrapper.
+You may run only narrowly focused, non-provider unit tests if they are guaranteed to use temporary locations and not mutate the repository or installed application. Disable pytest cache and Python bytecode generation. Do not run installation, deployment, the full suite, or provider tests during this investigation.
 
-Trace the environment into the real Python entry point:
+A passing wrapper test must not be presented as proof that direct Python execution is safe.
 
-active_environment
-→ deployment profile
-→ RUNTIME_CONFIG
-→ operational wrapper
-→ batch.py
-→ envsettings.py
-→ selected runtime YAML
-→ provider-client construction
+Required scenario matrix
 
-The main Python application must receive an explicit environment and absolute runtime-config path from the validated wrapper context.
+Report the observed behavior for:
 
-Before secret retrieval, input processing or provider construction, the application must prove:
+* DEV through the supported operational entry point;
+* PAT through the supported operational entry point;
+* Production through the supported operational entry point;
+* direct Python invocation;
+* missing marker;
+* invalid marker;
+* marker/profile/YAML mismatch;
+* wrong or missing RUNTIME_CONFIG;
+* explicit local/fixture execution;
+* rollback to a previous release.
 
-active marker
-== wrapper environment
-== deployment profile CLUE_ENV
-== runtime YAML environment
+Use CONFIRMED, FAILS_CLOSED, UNSAFE/DEFAULTS, NOT_IMPLEMENTED, or UNKNOWN for each scenario, with exact evidence.
 
-Installed execution must fail closed if this context is missing or inconsistent.
+Final verdict
 
-Do not infer the environment from hostname, current user, current directory, endpoint name, profile order or a DEV default.
+Choose exactly one implementation verdict:
 
-Preserve explicit local/fixture execution only as a clearly separate test/development mode. It must not become an installed-environment fallback.
+* CENTRAL_APPLICATION_LOADER_VERIFIED
+* WRAPPER_DEPENDENT_ENVIRONMENT_SELECTION
+* PARTIAL_OR_BYPASSABLE_ENVIRONMENT_SELECTION
+* CENTRAL_APPLICATION_LOADER_NOT_FOUND
+* INSUFFICIENT_EVIDENCE
 
-Verify that operational endpoint overrides cannot silently replace the selected environment’s endpoints.
+Do not issue a production-readiness verdict.
 
-Add tests at both levels:
+Finish with:
 
-* direct application-level tests;
-* one integration test running the real wrapper into the real Python entry point without making a live provider call.
+1. the exact supported runtime command currently documented and implemented;
+2. the verified environment-selection chain;
+3. any bypass or ambiguity;
+4. missing tests;
+5. the smallest implementation gap that would need correction in a later task;
+6. explicit confirmation that no files, Git state, artifact, installation, provider, or secret were changed or accessed.
 
-Phase 4 — Preserve the non-root installation objective
-
-Every correction must retain the primary owner requirement:
-
-* normal installation is initiated by an approved non-root operator;
-* no personal password is requested;
-* direct mode works when the initiator is the configured NPID;
-* delegated mode works for an exactly authorized non-root initiator;
-* the installed application remains owned and run by the configured NPID;
-* root is restricted to one-time bootstrap or recovery;
-* normal runbook sections contain no sudo -i, su -, or “Become Root” step;
-* missing prerequisites fail before mutation.
-
-Re-run the complete identity matrix after any installer or wrapper change.
-
-Phase 5 — Failure safety and full regression
-
-After Phases 1–4 are green, run:
-
-1. staged-extraction failure injection;
-2. validation-before-activation failure;
-3. interruption during replacement;
-4. rollback restoration;
-5. concurrent-installer locking tests;
-6. passwordless/no-TTY tests;
-7. environment/lifecycle/layout suites;
-8. the complete repository regression suite from a fresh process.
-
-Required outcome:
-
-0 failed
-0 unexpected errors
-
-Classify and explain every skip.
-
-Any repair requires restarting verification from Phase 1.
-
-Phase 6 — Test artifact gate
-
-Only after every required suite is green:
-
-* inspect current Git identity and dirty payload state;
-* use the repository-local test-release skill;
-* build a uniquely named test-only artifact;
-* do not overwrite or reuse an older artifact;
-* generate its SHA-256 sidecar;
-* verify archive safety, required members, executable modes and secret exclusion;
-* extract it into a clean temporary root;
-* run clean-room DEV/PAT/Production installation simulations;
-* verify non-root installation;
-* verify the active-environment marker;
-* verify application-level environment selection;
-* verify rollback.
-
-Do not publish, deploy, commit, push, tag or create a PR.
-
-PAT and Production tungsten_base_url values remain external inputs unless authoritative values are supplied. Do not invent them or copy DEV values. Their absence is separate from implementation test failures.
-
-Final report
-
-Report:
-
-* changed files;
-* remaining diff;
-* focused suite counts;
-* active-environment suite counts;
-* application-level environment tests;
-* identity-matrix result;
-* failure-injection and rollback results;
-* full regression result;
-* artifact filename, size and SHA-256, if built;
-* external unresolved values;
-* confirmation that no password, live provider call, deployment, publication, commit or push occurred.
-
-Use only evidence-supported verdicts:
-
-NON_ROOT_INSTALL_AND_ACTIVE_ENVIRONMENT_VERIFIED
-APPLICATION_RUNTIME_ENVIRONMENT_CONTRACT_VERIFIED
-IMPLEMENTATION_TEST_FAILURES_REMAIN
-EXTERNAL_TUNGSTEN_ENDPOINT_VALUES_REQUIRED
+Stop after the investigation report. Do not implement the recommendations.
