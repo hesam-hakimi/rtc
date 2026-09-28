@@ -1,274 +1,94 @@
-New owner clarification changes the recovery interpretation.
+I confirm that the other agent sessions have now been stopped. You are the only active writer for this working tree.
 
-The concurrent changes were not necessarily accidental corruption. Another authorized agent was intentionally modifying the installer so that the person invoking installation would not be required to log in as the target NPID.
+Proceed with the reconciliation, subject to the following owner ruling.
 
-Treat both work streams as valid candidate work that must be reconciled:
+PAT/Production identity ruling
 
-1. environment-aware deployment/configuration and endpoint isolation;
-2. installation initiated by an authorized non-NPID operator.
+Use the conservative, evidence-based interpretation:
 
-Do not blindly restore either agent’s complete version.
+* DEV identity is confirmed.
+* PAT identity, PAT host binding and PAT installation root are not yet independently confirmed.
+* Production identity, host binding and installation root are not confirmed.
+* A comment inside pat.conf claiming that a value was owner-verified is not, by itself, verification evidence.
+* The conflicting comment in pat.yaml demonstrates that the repository is internally inconsistent.
+* Do not resolve this contradiction by trusting whichever file is more convenient.
 
-First: establish a single writer
+Treat the following current PAT values only as unverified candidates:
 
-Before continuing, confirm that every other agent/session has stopped editing this working tree.
+NPID=ACLUE885APPS
+EXPECT_HOST=rclueapazhgs0.dev.vmc2.td.com
 
-If another writer is still active, stop with:
+Preserve those candidate values in the recovery evidence, but do not claim they are approved PAT values and do not allow them to authorize a real PAT installation.
 
-CONCURRENT_WRITER_STILL_ACTIVE
+The .dev.vmc2.td.com hostname in a PAT profile requires explicit environment-owner confirmation; do not infer validity from its presence in the repository.
 
-Do not use:
+Apply the same conservative rule to Production.
 
-* bulk Undo;
-* Git reset;
-* Git clean;
-* checkout-based restoration;
-* stash;
-* whole-file replacement from an older copy.
+Required repository alignment
 
-Preserve a byte-for-byte recovery snapshot of all changed and untracked files outside the repository before modifying anything.
+Remove or correct unsupported comments that claim PAT or Production values were verified.
 
-Restart analysis from the current working tree
+The shipped higher-environment profiles must fail closed when an owner-controlled value is unresolved. Use the repository’s established unresolved-value mechanism rather than inventing real-looking values.
 
-Discard the earlier assumption that all externally modified files should be reverted.
+It is acceptable to use isolated test fixtures containing synthetic PAT and Production identities to prove that the common installer works for all three environment shapes. Clearly separate those fixtures from deployable configuration.
 
-Restart the engineering analysis from Phase 0 using:
+For runtime endpoints:
 
-* the current working-tree bytes;
-* the diff against HEAD;
-* current call sites;
-* current tests;
-* current deployment documentation;
-* both agents’ surviving changes.
+* preserve supported symcor_url behavior when repository evidence establishes it;
+* retain tungsten_base_url: UNCONFIRMED where no approved value exists;
+* do not substitute DEV endpoints;
+* do not silently fall back to local or another environment.
 
-Previous passing test counts are historical only. They must not be used as evidence for the reconciled tree.
+Continue the planned reconciliation
 
-Required target contract
+Proceed with:
 
-Distinguish these identities explicitly:
+1. a fresh recovery snapshot;
+2. WS1/WS2/pre-existing hunk classification;
+3. surgical reconciliation of envsettings.py;
+4. repair of the broken batch.py import contract;
+5. preservation of the non-NPID installer-initiator work;
+6. preservation of the configured-NPID runtime-owner contract;
+7. the complete identity and environment test matrices;
+8. the full verification pipeline from the beginning.
 
-Installation initiator
+Historical passing test counts remain invalid for the reconciled bytes.
 
-The installation command may be initiated by:
+Privilege validation correction
 
-* the configured NPID;
-* an approved deployment/service account;
-* an explicitly authorized administrator for bootstrap or recovery.
+Do not treat a generic probe such as:
 
-The initiator is not automatically required to be the target NPID.
+sudo -n -u <NPID> true
 
-Runtime owner
+as sufficient proof of deployment authorization.
 
-The installed application files, runtime directories and normal application process must belong to and run as the environment’s configured NPID.
+Validate the exact noninteractive operations the installer will execute. Do not broaden sudoers merely to make the probe pass.
 
-For DEV, current owner-supplied evidence identifies:
+Required behavior remains:
 
-tclue999devs
+* an approved installer initiator need not be logged in as the target NPID;
+* the configured environment NPID owns the installed application and runs it;
+* no personal password is requested or stored;
+* missing exact authorization fails before mutation;
+* an arbitrary CLI-provided owner is rejected;
+* root remains an explicit bootstrap/recovery exception.
 
-Do not hard-code that DEV account into PAT or Production.
+Expected verdict behavior
 
-PAT and Production must obtain their NPID values from their own deployment profiles. Unknown values must remain explicit blockers.
+If reconciliation and all internal tests pass while PAT or Production owner values remain unconfirmed, return:
 
-Privilege behavior
+EXTERNAL_ENVIRONMENT_VALUES_REQUIRED
 
-Normal installation must not:
+This is not an implementation failure. Report separately that the common installer has passed simulated DEV/PAT/Production configuration tests.
 
-* ask for the owner’s personal password;
-* use interactive sudo;
-* use sudo -S;
-* use sudo -i;
-* use su -;
-* use sshpass, expect or SUDO_ASKPASS;
-* persist credentials;
-* grant broad root access.
+Do not issue:
 
-All automated privileged commands must use a previously approved noninteractive path such as narrowly scoped sudo -n.
+RECONCILED_READY_FOR_FULL_VERIFICATION
 
-If an approved noninteractive privilege path is absent, fail before modifying the installation root and report:
+for real higher-environment deployment until the actual PAT and Production identities, hosts and roots have authoritative confirmation.
 
-PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
+Continue now without another question unless:
 
-Do not weaken controls merely to allow any user to install.
-
-Important semantic rule
-
-“NPID is not required to invoke the installer” must not become any of the following:
-
-* NPID ownership is optional;
-* the application runs under the invoking user;
-* an arbitrary user may select an arbitrary owner;
-* host or account validation is bypassed;
-* /app/clue becomes writable by broad groups or everyone;
-* the installer silently falls back to the current user;
-* DEV identity is reused for PAT or Production;
-* root becomes the normal runtime owner.
-
-The target NPID must come from the selected environment deployment profile, not from an unrestricted command-line value.
-
-Reconcile the two work streams
-
-Build a semantic collision map for every overlapping file.
-
-For each file, identify:
-
-* environment/endpoint behavior added by the first work stream;
-* caller-identity behavior added by the second work stream;
-* behavior currently present;
-* behavior currently missing;
-* conflicting tests or documentation;
-* the minimal combined implementation.
-
-Pay particular attention to the native paths corresponding to:
-
-envsettings.py
-batch.py
-config.py
-clue_install_release.sh
-clue_operational_wrapper.sh
-clue_preinstall_check.sh
-deployment_env_conf/dev.conf
-deployment_env_conf/pat.conf
-deployment_env_conf/prod.conf
-environments/dev.yaml
-environments/pat.yaml
-environments/prod.yaml
-CLUE_OPERATIONAL_DEPLOYMENT.md
-test_environment_selection.py
-test_environment_lifecycle.py
-test_install_release.py
-test_preinstall_check.py
-test_operational_wrapper.py
-test_deliverables_layout.py
-
-Resolve actual paths from the repository; do not assume these abbreviated names are complete.
-
-Repair the current broken import surgically
-
-The current evidence reports that batch.py imports assert_endpoints_resolved while the current envsettings.py no longer defines it.
-
-Do not solve this by restoring an entire older envsettings.py.
-
-Instead:
-
-1. inspect current call sites;
-2. inspect current tests;
-3. inspect current configuration contracts;
-4. identify the intended endpoint-validation API;
-5. restore or replace only the behavior that remains required;
-6. preserve compatible improvements from both work streams.
-
-Also assess the reportedly missing:
-
-* log-path support;
-* Tungsten runtime keys;
-* optional path keys;
-* ${VAR:-default} expansion.
-
-Restore each only when current repository evidence proves it belongs in the intended contract.
-
-Required identity test matrix
-
-After reconciliation, test all of these cases for DEV, PAT and Production using isolated temporary roots:
-
-Initiator	Expected result
-Correct environment NPID	Installation succeeds without a password
-Approved non-NPID deployment account with exact noninteractive privilege	Installation succeeds; final owner remains configured NPID
-Unauthorized non-NPID user	Fails before mutation
-Root in documented explicit bootstrap/recovery mode	Allowed only through the explicit exception
-Root through normal operator path	Rejected
-Missing target NPID	Fails before mutation
-Unknown target NPID	Fails before mutation
-Password prompt attempted	Immediate failure
-Wrong environment NPID	Fails before mutation
-Arbitrary owner supplied by CLI	Rejected
-Missing exact sudoers authorization	Fails before mutation
-Broad unsafe sudoers authorization	Reported as unsafe, not accepted as proof
-
-Verify after successful installation that:
-
-* files and directories have the configured NPID ownership;
-* runtime execution occurs as that NPID;
-* the initiator does not remain the runtime owner;
-* no directory is made world-writable;
-* environment configuration cannot select another environment’s account or endpoints.
-
-Environment and endpoint tests
-
-For each of dev, pat and prod, independently prove:
-
-* explicit environment selection;
-* correct deployment profile;
-* correct runtime YAML;
-* correct application root;
-* correct configured NPID;
-* correct sanitized endpoint identity;
-* no cross-environment fallback;
-* no local fallback in PAT or Production;
-* unresolved values fail closed;
-* secrets remain outside YAML and .conf;
-* no live provider call occurs.
-
-UNCONFIRMED PAT or Production values may be preserved as explicit blockers, but they must never be treated as deployable values.
-
-Full re-verification
-
-Once reconciliation is complete, restart verification from the beginning:
-
-1. Git and scope inspection;
-2. Python import and syntax checks;
-3. bash -n for all shipped shell scripts;
-4. environment/configuration schema tests;
-5. complete initiator-versus-runtime-owner matrix;
-6. passwordless execution tests with and without a TTY;
-7. endpoint-isolation tests;
-8. installer preflight tests;
-9. archive/checksum/security tests;
-10. staged extraction and validation-before-swap tests;
-11. failure-injection, locking and rollback tests;
-12. all focused deployment/configuration tests;
-13. full repository regression suite;
-14. unique test-artifact build and SHA-256 sidecar;
-15. clean-room installation for all three environment profiles.
-
-Any repair after a Tester failure must cause the Tester to restart again from Step 1.
-
-Current restrictions
-
-Do not:
-
-* commit;
-* push;
-* create or update a PR;
-* publish;
-* deploy;
-* mutate /app/clue;
-* contact live providers;
-* use the stale /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz;
-* overwrite an existing artifact;
-* invent PAT or Production identities;
-* request or use a personal password.
-
-Required report
-
-Before claiming readiness, report:
-
-* confirmation that only one writer remains;
-* branch and full HEAD;
-* complete changed-file inventory;
-* how both work streams were preserved;
-* final distinction between installer initiator and runtime NPID;
-* exact reconciliation of envsettings.py and batch.py;
-* identity-matrix results;
-* DEV/PAT/Production configuration-matrix results;
-* passwordless-execution results;
-* focused and full-suite results;
-* unresolved external values;
-* whether the tree is ready for artifact construction.
-
-Use one of these verdicts:
-
-* RECONCILED_READY_FOR_FULL_VERIFICATION
-* RECONCILIATION_FAILED
-* CONCURRENT_WRITER_STILL_ACTIVE
-* PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
-* EXTERNAL_ENVIRONMENT_VALUES_REQUIRED
+* a new concurrent writer appears;
+* reconciliation would destroy an unrecoverable change;
+* an additional owner-controlled value is required to proceed safely.
