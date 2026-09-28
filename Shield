@@ -1,409 +1,183 @@
-CLUE Non-Root Installation, Active Environment and Regression Repair
+Continue from the current reconciled working tree. Do not restart the project or restore older whole-file versions.
 
-Continue the current Manager → Developer → Independent Tester loop from the reconciled working tree.
+Maintain exactly one workspace writer. Continue the existing Manager → Developer → Independent Tester workflow, but serialize all modifications and tests.
 
-This prompt supersedes the previous continuation prompt.
+Phase 1 — Verify the latest repairs before making new changes
 
-1. Primary owner requirement
+First, make no additional implementation edits.
 
-The central reason for the installation changes is:
+Run fresh instances of the complete supported suites containing:
 
-An approved installation operator who does not have root access must be able to perform a normal CLUE installation without entering or supplying a personal password.
+test_install_release.py
+test_operational_wrapper.py
 
-Do not lose, weaken, bypass or reinterpret this requirement while repairing the current failures.
+The previous state:
 
-This does not mean every operating-system user may install CLUE.
+120 passed, 3 failed
 
-It means an approved non-root initiator may install when the environment’s one-time prerequisites have already been provisioned.
+is not accepted evidence because the final three fixes had not been rerun.
 
-The target environment NPID remains the owner and runtime identity of the installed application.
+Report:
 
-Keep these concepts separate:
+* exact commands;
+* exit codes;
+* passed/failed/skipped counts;
+* every remaining failure;
+* whether any file changed during execution.
 
-Installation initiator != necessarily the runtime NPID
-Runtime owner = configured environment NPID
-Normal installation initiator = approved non-root account
-Root = bootstrap/recovery exception only
+If a failure remains:
 
-2. Required operating modes
+1. Tester reports the exact reproducible failure.
+2. Manager creates one bounded work item.
+3. Developer makes the smallest correction.
+4. Tester reruns both complete suites from a fresh process.
 
-Preserve the current reported contract:
+Repeat until both suites have zero failures.
 
-INSTALL_MODE=direct
-INSTALL_MODE=delegated
-INSTALL_MODE=root
+Do not weaken, delete, skip or rename a test merely to obtain a pass.
 
-Direct mode
+Phase 2 — Verify active-environment behavior
 
-The current user is already the configured environment NPID.
+After Phase 1 is green, create and run the dedicated active-environment tests.
 
-Installation runs directly without root and without sudo.
-
-Delegated mode
-
-The current user is an approved non-root deployment operator but is not the configured NPID.
-
-The operator must be able to invoke the exact installer operation as the configured NPID through a pre-provisioned, narrowly scoped, noninteractive authorization path.
-
-The installer must:
-
-* use sudo -n, never interactive sudo;
-* delegate only to the NPID from the selected profile;
-* reject any CLI option that attempts to name another owner;
-* validate the exact required authorization;
-* fail before filesystem mutation if authorization is missing;
-* re-execute under the profile NPID;
-* leave the installed application owned and operated by that NPID.
-
-Do not accept a generic or blanket sudo grant as evidence of safe authorization.
-
-Root mode
-
-Root is allowed only for:
-
-* one-time bootstrap;
-* controlled recovery;
-* an explicitly documented exceptional path.
-
-Root must not be the normal installation procedure, default mode, application owner or runtime identity.
-
-3. One-time bootstrap boundary
-
-A non-root installer cannot create its own privileged prerequisites from nothing.
-
-Normal non-root installation may assume that an authorized administrator has already provisioned:
-
-* the environment NPID;
-* the application root, including /app/clue where configured;
-* correct NPID ownership and permissions;
-* required groups;
-* narrowly scoped noninteractive delegation;
-* exact command-scoped Salt/Pillar sudoers rules;
-* any root-owned immutable helper that is genuinely required.
-
-If any prerequisite is missing, normal installation must stop before mutation with a precise result such as:
-
-PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
-APPLICATION_ROOT_BOOTSTRAP_REQUIRED
-RUNTIME_NPID_PREREQUISITE_MISSING
-
-It must not:
-
-* ask for the operator’s password;
-* use sudo -S;
-* use sudo -i;
-* use su -;
-* use sshpass;
-* use expect;
-* use SUDO_ASKPASS;
-* store a password;
-* suggest temporarily running the entire normal installation as root.
-
-Any administrative bootstrap instructions must be in a separate, explicitly named section and must not appear as Step 1 of normal DEV, PAT or Production installation.
-
-4. Preserve verified current work
-
-Preserve unless a new reproducible defect proves otherwise:
-
-* owner-confirmed DEV profile values;
-* owner-confirmed PAT profile values;
-* owner-confirmed Production profile values;
-* /app/clue where specified by the profiles;
-* reconciled envsettings.py;
-* reconciled batch.py;
-* ${VAR:-default} parsing;
-* optional path handling;
-* restored runtime keys;
-* endpoint sanitization;
-* environment isolation;
-* RUNTIME_CONFIG profile binding;
-* direct/delegated/root mode implementation;
-* configured NPID as runtime owner;
-* the passing identity matrix.
-
-Do not replace the confirmed PAT or Production NPID, EXPECT_HOST, or APP_ROOT values with UNCONFIRMED.
-
-Do not invent the unresolved PAT or Production tungsten_base_url values.
-
-5. Current regression evidence
-
-The latest reported result is:
-
-10/10 shipped shell scripts passed bash syntax
-87 environment/lifecycle/layout tests passed
-50 identity-matrix tests passed
-171 installer/readiness/wrapper tests passed
-18 installer/readiness/wrapper tests failed
-1 test skipped
-
-Therefore, the current tree is not ready.
-
-The three named installer tests are not the entire failure count. Reproduce and classify all 18 failures.
-
-Create a table containing:
-
-* failing test;
-* exact assertion;
-* root cause;
-* implementation defect versus stale test;
-* affected file;
-* corrective action.
-
-Do not modify a test merely because it fails. First prove that it encodes a superseded requirement.
-
-6. Repair the root-first runbook regression
-
-The current CLUE_OPERATIONAL_DEPLOYMENT.md reportedly contains a normal flow resembling:
-
-Step 1 — Become Root
-...
-Step 5 — Leave Root
-
-That directly violates the owner requirement.
-
-Re-author the runbook from the current installer behavior and test contract.
-
-Provide three self-contained normal-installation sections:
-
-* Install in DEV
-* Install in PAT
-* Install in Production
-
-Each normal section must begin with an approved non-root operator and include:
-
-1. select the environment;
-2. set artifact and SHA-256 inputs;
-3. run non-mutating preflight;
-4. determine direct or delegated mode;
-5. perform installation without an interactive password;
-6. verify active environment;
-7. verify final NPID ownership;
-8. run the appropriate offline validation.
-
-Normal sections must contain no sudo -i, su -, “Become Root”, or personal-password step.
-
-Document one-time administrative bootstrap and recovery separately.
-
-7. Correct the superseded identity tests
-
-Update the three outdated tests semantically without deleting or weakening them.
-
-The resulting tests must prove:
-
-1. the installer defaults to the profile NPID as runtime owner, never root;
-2. an approved unprivileged initiator may use direct or delegated mode;
-3. identity-refusal messages describe the valid alternative mode accurately;
-4. an unauthorized non-root user fails before mutation;
-5. missing exact delegation fails before mutation;
-6. no CLI value may substitute an arbitrary runtime owner;
-7. root requires the explicit exception path.
-
-Also repair the CRLF configuration fixture by including the required RUNTIME_CONFIG field while preserving the original CRLF tolerance purpose.
-
-8. Persist the active environment
-
-All DEV, PAT and Production profiles may remain in the artifact and installed tree.
-
-The installer must persist exactly one active environment during installation.
-
-First inspect whether an equivalent installation-state mechanism already exists. Reuse it if it satisfies the following contract. Do not create a competing selector.
-
-Otherwise create:
+Verify that installation writes exactly one marker:
 
 <active-installed-tree>/config/active_environment
 
-Its complete value must be exactly:
+The only permitted values are:
 
 dev
-
-or:
-
 pat
-
-or:
-
 prod
 
-with an optional final newline.
+Prove:
 
-The marker:
+* DEV writes and loads dev;
+* PAT writes and loads pat;
+* Production writes and loads prod;
+* all three profiles may be installed, but only the marked profile is active;
+* --environment is an assertion and cannot override the marker;
+* missing, empty, unknown, padded, multi-line and symlinked markers fail closed;
+* profile CLUE_ENV must match the marker;
+* RUNTIME_CONFIG must remain beneath the active installed tree;
+* runtime YAML environment must match the marker;
+* rollback restores the previous marker and matching configuration;
+* validation happens before Pillar retrieval or provider activity.
 
-* contains no secret;
-* is created inside the staged tree;
-* is owned consistently with the installed application;
-* does not require root during normal installation;
-* is validated before activation;
-* is activated atomically with the release;
-* is restored with the matching release during rollback.
+Phase 3 — Close the main-application environment gap
 
-The non-root installation requirement applies to creation and activation of this marker.
+Do not stop after proving the installer and wrapper.
 
-Do not solve marker creation by reintroducing a root requirement.
+Trace the environment into the real Python entry point:
 
-9. Runtime environment selection
+active_environment
+→ deployment profile
+→ RUNTIME_CONFIG
+→ operational wrapper
+→ batch.py
+→ envsettings.py
+→ selected runtime YAML
+→ provider-client construction
 
-The operational wrapper must determine the active environment from the installed marker.
+The main Python application must receive an explicit environment and absolute runtime-config path from the validated wrapper context.
 
-It must not guess from:
-
-* hostname;
-* username;
-* NPID naming conventions;
-* current directory;
-* endpoint hostname;
-* profile ordering;
-* a DEV default.
-
-Runtime must:
-
-1. locate the installed application independently of the caller’s current directory;
-2. read the active marker strictly;
-3. load only:
-
-config/deployment_env_conf/<active>.conf
-
-4. read RUNTIME_CONFIG from that profile;
-5. resolve it beneath the installed application tree;
-6. load only the corresponding environment YAML;
-7. verify:
+Before secret retrieval, input processing or provider construction, the application must prove:
 
 active marker
-== profile CLUE_ENV
+== wrapper environment
+== deployment profile CLUE_ENV
 == runtime YAML environment
 
-8. validate EXPECT_HOST;
-9. validate the configured runtime NPID;
-10. stop before Pillar retrieval or provider activity on any mismatch.
+Installed execution must fail closed if this context is missing or inconsistent.
 
-If AutoSys, a CLI option or an environment variable also supplies an environment, treat it only as an assertion.
+Do not infer the environment from hostname, current user, current directory, endpoint name, profile order or a DEV default.
 
-It must equal the installed marker and must never override it.
+Preserve explicit local/fixture execution only as a clearly separate test/development mode. It must not become an installed-environment fallback.
 
-10. Non-root installation tests
+Verify that operational endpoint overrides cannot silently replace the selected environment’s endpoints.
 
-Test at least these cases for DEV, PAT and Production:
+Add tests at both levels:
 
-Scenario	Required outcome
-Initiator is configured NPID	Direct install succeeds
-Approved non-root initiator with exact delegation	Delegated install succeeds
-Approved non-root initiator without delegation	Fails before mutation
-Unauthorized user	Fails before mutation
-Generic or blanket sudo grant	Rejected as unsafe
-Interactive password prompt attempted	Immediate failure
-No controlling TTY	Same deterministic result
-Root through normal path	Rejected
-Root through explicit exception	Allowed only as documented
-Missing NPID	Fails before mutation
-Application root not provisioned	Bootstrap-required result
-CLI attempts alternate owner	Rejected
-Successful delegated installation	Final tree owned by profile NPID
-Runtime launch	Runs under profile NPID
+* direct application-level tests;
+* one integration test running the real wrapper into the real Python entry point without making a live provider call.
 
-Also verify:
+Phase 4 — Preserve the non-root installation objective
 
-* no normal-install command needs the owner’s password;
-* no password appears in logs or command arguments;
-* no world-writable application directory is created;
-* no broad sudoers entry is generated;
-* the delegated executable and its parent path satisfy the implementation’s integrity requirements;
-* checksum verification occurs before delegated execution or activation.
+Every correction must retain the primary owner requirement:
 
-11. Active-environment tests
+* normal installation is initiated by an approved non-root operator;
+* no personal password is requested;
+* direct mode works when the initiator is the configured NPID;
+* delegated mode works for an exactly authorized non-root initiator;
+* the installed application remains owned and run by the configured NPID;
+* root is restricted to one-time bootstrap or recovery;
+* normal runbook sections contain no sudo -i, su -, or “Become Root” step;
+* missing prerequisites fail before mutation.
 
-Test:
+Re-run the complete identity matrix after any installer or wrapper change.
 
-* DEV installation writes dev;
-* PAT installation writes pat;
-* Production installation writes prod;
-* all three profiles coexist safely;
-* only the active profile is loaded;
-* only its RUNTIME_CONFIG is loaded;
-* missing marker fails closed;
-* empty marker fails closed;
-* unknown value fails closed;
-* multi-line value fails closed;
-* environment assertion mismatch fails closed;
-* profile/YAML mismatch fails closed;
-* traversal and symlink escape fail closed;
-* execution from a different current directory succeeds;
-* rollback restores the previous environment marker and matching configuration;
-* no secret is stored;
-* no Pillar or provider call occurs before selection validation.
+Phase 5 — Failure safety and full regression
 
-12. Independent verification loop
+After Phases 1–4 are green, run:
 
-After every Developer correction, the Independent Tester must restart from the beginning:
+1. staged-extraction failure injection;
+2. validation-before-activation failure;
+3. interruption during replacement;
+4. rollback restoration;
+5. concurrent-installer locking tests;
+6. passwordless/no-TTY tests;
+7. environment/lifecycle/layout suites;
+8. the complete repository regression suite from a fresh process.
 
-1. Git and scope inspection;
-2. shell syntax;
-3. Python syntax and imports;
-4. environment parsing;
-5. lifecycle and layout tests;
-6. identity matrix;
-7. installer tests;
-8. readiness tests;
-9. wrapper tests;
-10. non-root and no-TTY tests;
-11. active-environment tests;
-12. rollback and failure injection;
-13. complete repository regression suite.
-
-Required result:
+Required outcome:
 
 0 failed
 0 unexpected errors
 
-If a required test fails, return it to the Developer and repeat the complete cycle.
+Classify and explain every skip.
 
-Do not build an artifact while any implementation or regression failure remains.
+Any repair requires restarting verification from Phase 1.
 
-13. Artifact gate
+Phase 6 — Test artifact gate
 
-Only after every required test passes:
+Only after every required suite is green:
 
+* inspect current Git identity and dirty payload state;
 * use the repository-local test-release skill;
-* build a new uniquely named test-only artifact;
-* do not overwrite the stale artifact;
-* generate a mandatory SHA-256 sidecar;
-* validate archive safety and secret exclusion;
-* perform clean-room installation as an approved non-root initiator;
-* verify active-environment persistence;
-* verify final NPID ownership;
+* build a uniquely named test-only artifact;
+* do not overwrite or reuse an older artifact;
+* generate its SHA-256 sidecar;
+* verify archive safety, required members, executable modes and secret exclusion;
+* extract it into a clean temporary root;
+* run clean-room DEV/PAT/Production installation simulations;
+* verify non-root installation;
+* verify the active-environment marker;
+* verify application-level environment selection;
 * verify rollback.
 
-Do not publish, deploy, commit, push or create a PR.
+Do not publish, deploy, commit, push, tag or create a PR.
 
-14. External endpoint values
+PAT and Production tungsten_base_url values remain external inputs unless authoritative values are supplied. Do not invent them or copy DEV values. Their absence is separate from implementation test failures.
 
-Real PAT and Production tungsten_base_url values remain external owner inputs unless current authoritative evidence supplies them.
+Final report
 
-Do not:
+Report:
 
-* copy DEV URLs;
-* invent URLs;
-* remove the validation;
-* hide the missing values with fallback behavior.
+* changed files;
+* remaining diff;
+* focused suite counts;
+* active-environment suite counts;
+* application-level environment tests;
+* identity-matrix result;
+* failure-injection and rollback results;
+* full regression result;
+* artifact filename, size and SHA-256, if built;
+* external unresolved values;
+* confirmation that no password, live provider call, deployment, publication, commit or push occurred.
 
-Internal tests may use clearly synthetic endpoint fixtures, but deployable profiles must fail closed until their real values are supplied.
-
-15. Final verdict
-
-Return all applicable verdicts:
+Use only evidence-supported verdicts:
 
 NON_ROOT_INSTALL_AND_ACTIVE_ENVIRONMENT_VERIFIED
+APPLICATION_RUNTIME_ENVIRONMENT_CONTRACT_VERIFIED
 IMPLEMENTATION_TEST_FAILURES_REMAIN
-PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
-APPLICATION_ROOT_BOOTSTRAP_REQUIRED
 EXTERNAL_TUNGSTEN_ENDPOINT_VALUES_REQUIRED
-
-NON_ROOT_INSTALL_AND_ACTIVE_ENVIRONMENT_VERIFIED is permitted only when:
-
-* normal installation does not require root;
-* an approved non-root initiator can complete direct or delegated installation;
-* no personal password is required;
-* runtime ownership remains the configured NPID;
-* active environment is persisted and enforced;
-* rollback is safe;
-* all required tests have zero failures.
-
-The missing real PAT/Production Tungsten endpoints may be reported separately, but must not be misrepresented as an implementation test failure.
