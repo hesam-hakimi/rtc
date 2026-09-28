@@ -1,318 +1,554 @@
-Continue the active CLUE engineering work. This is an implementation, regression-verification and test-artifact rebuild task.
+CLUE DEV Multi-Agent Autonomous Install–Repair Loop
 
-Use English for all engineering output, code, comments, tests, documentation and reports.
+You are the CLUE Engineering Manager. Run a genuinely multi-agent workflow for the current CLUE repository.
 
-Confirmed current context
+1. Create the engineering team
 
-* The current branch already incorporated main and was pushed before the latest working-tree changes.
-* No PR/MR has been requested yet.
-* Non-root/NPID is now the default deployment model.
-* PRIVILEGE_MODE=npid is present in the shipped DEV, PAT and PROD deployment profiles.
-* Root execution is an explicit exception, not the normal operator path.
-* The full suite was last reported as 1166 passed, 66 skipped and 0 failed.
-* The currently staged DEV package /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz is stale. It was built from older revision 9015962, contains the old root-default installer/runbook and must not be used.
-* Do not overwrite that artifact or silently reuse its filename.
-* Existing configuration families are:
-    * Deliverables/config/deployment_env_conf/dev.conf
-    * Deliverables/config/deployment_env_conf/pat.conf
-    * Deliverables/config/deployment_env_conf/prod.conf
-    * Deliverables/config/environments/dev.yaml
-    * Deliverables/config/environments/pat.yaml
-    * Deliverables/config/environments/prod.yaml
-    * Deliverables/config/environments/local.yaml
+Immediately create exactly two persistent sub-agents:
 
-Owner-required design
+1. CLUE Developer
+    * Owns code, configuration, installer, documentation, and test changes.
+    * May run focused tests while developing.
+    * Must not declare the final result successful.
+2. CLUE Independent Tester
+    * Must not modify application code, deployment scripts, configuration, documentation, or tests.
+    * Reproduces failures and independently runs the complete acceptance pipeline.
+    * Returns PASS or FAIL with exact sanitized evidence.
+    * Must never repair a failure itself.
 
-Implement one environment-aware installation and runtime contract.
+You are the third agent: CLUE Engineering Manager.
 
-There must be:
+The Manager must:
 
-* one codebase;
-* one deployable artifact containing the supported environment profiles;
-* one installer implementation;
-* an explicit required environment selection;
-* separate, self-contained installation instructions for DEV, PAT and PROD;
-* deterministic loading of the matching environment’s runtime configuration;
-* no silent fallback from PAT or PROD to DEV or local values.
+* inspect and plan;
+* maintain the task and evidence ledger;
+* assign one bounded work item at a time;
+* prevent simultaneous changes to the shared working tree;
+* decide whether a failure returns to the Developer;
+* authorize each complete retest;
+* issue the final verdict.
 
-Do not create separate DEV, PAT and PROD artifacts or fork the installer into three scripts.
+Do not simulate the three roles in one context. Use real sub-agent/delegation support. If real sub-agents are unavailable, stop with:
 
-The environment-specific differences currently known include provider endpoints. Do not assume endpoints are the only differences. Inspect and classify all environment-dependent values, including:
+MULTI_AGENT_CAPABILITY_UNAVAILABLE
 
-* Symcor endpoint or base URL;
-* Tungsten endpoint or base URL;
-* any provider configuration/session identifiers;
-* NPID;
-* EXPECT_HOST;
-* application root;
-* external inbox and lifecycle paths;
-* trust/CA paths where applicable;
-* provider mode;
-* scheduler/runtime entry-point inputs.
+The Manager must not edit implementation files. The Tester must never fix failures. All code changes belong to the Developer.
 
-Do not invent PAT or PROD values. If an authoritative value is unavailable, preserve an explicit unresolved marker and make readiness/preflight fail with a precise sanitized message.
+2. Objective
 
-Phase 1 — inspect before editing
+Reach a verified, test-only DEV state in which:
 
-Record:
+* installation follows the current repository documentation;
+* the installer explicitly selects dev;
+* deployment configuration comes from the DEV deployment configuration;
+* runtime application configuration and endpoints come from the DEV application configuration;
+* runtime secrets come only from the approved Salt Pillar/Vault workflow;
+* the application is installed under the approved DEV root;
+* an offline/fixture DEV execution succeeds;
+* every required acceptance check has zero failures.
 
-* repository root;
-* branch and full HEAD;
-* upstream SHA;
-* staged, unstaged and untracked changes;
-* exact files changed since the last push;
-* current installer argument parser;
-* current configuration-loading code and precedence;
-* every endpoint-related setting and all of its consumers;
-* all existing environment-selection tests;
-* current artifact and package-layout rules.
+Continue autonomously through ordinary code and test failures. Do not ask the user to approve each repair iteration.
 
-Preserve every unrelated working-tree change.
+“Zero errors” means zero failures in the acceptance scope defined below. Do not claim that every possible Production or live-provider condition has been certified.
 
-Produce a concise current-state table:
+3. Hard scope and safety boundaries
 
-Setting	Current source	DEV	PAT	PROD	Secret?	Authoritative?
+This workflow is:
 
-Do not expose actual secret values.
+* DEV only;
+* test-artifact only;
+* single-operator;
+* non-Production;
+* non-provider;
+* non-promotional.
 
-Phase 2 — establish clear configuration ownership
+Current owner-supplied DEV contract:
 
-Keep the existing two configuration families but give them non-overlapping responsibilities.
+* application root: /app/clue;
+* operational NPID: tclue999devs;
+* environment: dev.
 
-deployment_env_conf/<environment>.conf
+Confirm these values against current tracked configuration and documentation before installation. Fail closed on any disagreement.
 
-Use this layer only for deployment and host prerequisites, such as:
+Never:
 
-* environment identity;
-* NPID;
-* PRIVILEGE_MODE;
-* EXPECT_HOST;
-* installation/application root;
-* deployment/runtime configuration location;
-* host-owned directories or prerequisite paths.
+* access, install into, or mutate PAT or Production;
+* call live Symcor or Tungsten endpoints;
+* contact providers;
+* print secret values, private keys, certificates, tokens, passwords, or Pillar responses;
+* store secrets in YAML, .conf, logs, evidence, command arguments, or artifacts;
+* use broad root access or broad sudo;
+* bypass EXPECT_HOST, NPID, checksum, certificate, or archive-safety checks;
+* run concurrent installers;
+* overwrite or delete an existing artifact;
+* overwrite an existing application tree without a proven recovery path;
+* commit, merge, create a PR, tag, push, publish, promote, or deploy outside the explicitly authorized DEV installation;
+* modify CI/CD, pom.xml, assembly.xml, CD configuration, or Salt formulas merely to make this exercise pass.
 
-Do not store provider credentials or PEM material here.
+If a necessary repair genuinely requires one of those excluded changes, stop and report the exact reason.
 
-environments/<environment>.yaml
+4. Initial Manager inspection
 
-Use this layer for non-secret application-runtime behavior, such as:
+Before assigning implementation work, the Manager must inspect native repository evidence:
 
-* environment;
-* input, processing, output, archive, workspace and log paths;
-* provider mode;
-* Symcor endpoint configuration;
-* Tungsten endpoint configuration;
-* non-secret timeouts, retries and process/configuration identifiers;
-* other existing non-secret application settings.
+git status --short --branch
+git rev-parse --show-toplevel
+git rev-parse HEAD
+git branch --show-current
+git log -1 --oneline
+git diff --stat
+git diff
+git ls-files --others --exclude-standard
 
-Use the existing schema and loader conventions wherever possible. Do not introduce a third configuration source.
+Also inspect, if present:
 
-Select one canonical source for each non-secret endpoint. Do not duplicate the same endpoint in both .conf and YAML.
+.github/skills/clue-test-release/SKILL.md
+Deliverables/deploy/
+Deliverables/config/deployment_env_conf/
+Deliverables/config/environments/
+Deliverables/docs/
+Deliverables/tests/
+assembly.xml
+pom.xml
 
-Prefer the environment YAML as the canonical application source if the current loader can support this cleanly. If existing code obtains endpoints through canonical environment variables, implement the smallest deterministic bridge from the selected YAML/profile and document the exact precedence.
+Confirm from repository bytes—not screenshots or previous reports—that:
 
-Secrets must continue to come from the existing four Salt Pillar values. Do not put secrets, PEM bodies, passwords or API keys in YAML, .conf, documentation, logs or the artifact.
+* main has already been incorporated into the current branch;
+* the intended branch is pushed;
+* no PR currently needs to be created by this workflow;
+* .github/skills/clue-test-release/SKILL.md exists before using it;
+* the artifact producer packages only the intended Deliverables/ payload;
+* the archive is intentionally rootless if includeBaseDirectory=false;
+* the installer and runbook describe the same installation contract.
 
-Phase 3 — deterministic environment selection
+Do not merge or push again merely to confirm these facts.
 
-Require an explicit supported environment:
+Record all pre-existing changes. Preserve unrelated owner changes. Never use git reset --hard, git clean, or another destructive cleanup command.
+
+Create a private, sanitized evidence directory in the native temporary directory, outside the repository. Maintain:
+
+* baseline Git identity;
+* iteration number;
+* assigned defect;
+* Developer handoff;
+* Tester result;
+* commands and exit codes;
+* sanitized test summaries;
+* artifact identity;
+* final verdict.
+
+Never copy secret-bearing output into this directory.
+
+5. Configuration ownership contract
+
+The implementation must use one codebase, one installer, and one artifact format for all environments.
+
+Do not create separate application code or separate artifact implementations for DEV, PAT, and Production.
+
+Environment selection must be explicit:
 
 --environment dev
 --environment pat
 --environment prod
 
-Do not silently default an operational installation to DEV or local.
+For this run, only --environment dev is permitted.
 
-For the selected environment:
+Expected separation:
 
-1. Resolve exactly one matching deployment profile.
-2. Resolve exactly one matching runtime YAML.
-3. Require the .conf environment marker, YAML environment value and CLI selection to agree.
-4. Refuse unknown, missing, duplicated or mismatched environment profiles.
-5. Refuse unresolved endpoint placeholders before installation/runtime activation.
-6. Refuse PAT or PROD execution if it would fall back to DEV/local endpoints, paths or provider mode.
-7. Log only the selected environment and sanitized endpoint hostnames. Do not log credentials, query strings, headers or secret identifiers beyond approved key names.
+* Deliverables/config/deployment_env_conf/dev.conf
+    * installation identity;
+    * expected host;
+    * privilege mode;
+    * installation paths;
+    * deployment-only controls.
+* Deliverables/config/environments/dev.yaml
+    * application runtime behavior;
+    * DEV endpoint selection;
+    * DEV paths and runtime parameters;
+    * non-secret provider configuration.
+* Salt Pillar/Vault
+    * Tungsten secret values;
+    * Symcor certificate material;
+    * Symcor private-key material;
+    * no secret fallback to repository configuration.
 
-If CLUE_ENVIRONMENT or an equivalent environment variable already exists, define deterministic behavior:
+The selected environment must control both installation and application startup. The application must not silently read PAT, Production, local, or generic fallback endpoints during a DEV run.
 
-* it may match the CLI selection; or
-* a mismatch must fail closed.
+Missing, unknown, inconsistent, or ambiguous environment selection must fail closed.
 
-Do not allow it to silently override an explicit CLI selection.
+PAT and Production values may be statically validated for structure, but must not be installed, contacted, or claimed as operationally verified.
 
-Phase 4 — environment-aware installation
+6. Existing evidence that must be revalidated
 
-Update the existing installer and wrapper minimally so that:
+Treat prior reports as leads, not proof.
 
-* the selected environment is preserved throughout preflight, extraction, configuration, validation and runtime handoff;
-* the installed release uses the corresponding YAML;
-* runtime invocation receives or resolves the same environment;
-* the selected environment is visible in sanitized status output;
-* the application cannot accidentally start with another environment’s endpoints;
-* NPID remains the default;
-* root remains a separately requested exception;
-* no runbook step asks the normal operator to execute sudo -i;
-* real /app/clue is not modified by tests.
+Revalidate the current bytes for:
 
-Do not hard-code tclue999devs into PAT or PROD.
+* Route 3 installer-driven, command-scoped sudoers provisioning;
+* exactly the approved four non-interactive salt-call pillar.get ... --out=json operations;
+* no broad sudo authorization;
+* runtime-secret reconstruction from Pillar-returned bytes;
+* certificate/private-key pairing validation;
+* byte preservation for already-readable PEM material;
+* fail-closed handling of unsafe flattened values;
+* noninteractive encrypted-key rejection;
+* fixed probe input:
 
-DEV may use the owner-confirmed tclue999devs only where the DEV deployment profile requires it.
+pass:clue-probe-not-a-passphrase
 
-PAT and PROD NPID/host values are not evidence-backed merely because they follow a naming pattern. If they are not already authoritative in repository evidence, report:
+* no use of a repository PEM as runtime input;
+* NPID-first installation;
+* DEV root /app/clue;
+* SHA-256 enforcement;
+* safe archive paths and extraction;
+* recovery when installation into an existing application root fails.
 
-* PAT_NPID_UNCONFIRMED;
-* PROD_NPID_UNCONFIRMED;
-* PAT_EXPECT_HOST_UNCONFIRMED;
-* PROD_EXPECT_HOST_UNCONFIRMED;
+Do not use the old artifact:
 
-and make the corresponding preflight stop safely.
+/tmp/clue-code-1.1.4-SNAPSHOT.tar.gz
 
-Phase 5 — installation instructions for each environment
+if it still contains the root-default installer or old runbook. Do not overwrite it. Any replacement must have a new unique filename.
 
-Update the existing operational deployment/runbook documentation. Avoid creating unnecessary helper scripts or duplicate frameworks.
+7. Manager–Developer–Tester protocol
 
-Provide three clearly separated, self-contained sections:
+A. Manager issues a work ticket
 
-1. Install in DEV
-2. Install in PAT
-3. Install in PROD
+Each ticket must contain:
 
-Each section must contain:
+* iteration number;
+* observed failure;
+* exact reproduction command;
+* expected result;
+* actual result;
+* relevant files;
+* acceptance criteria;
+* prohibited scope expansion.
 
-* required operator identity;
-* expected host;
-* selected deployment .conf;
-* selected application YAML;
-* application root;
-* exact installer command using the real current CLI;
-* checksum input;
-* preflight/readiness command;
-* post-install status command;
-* intentional runtime/batch command only when its contract is known;
-* recovery-only rollback command in a separate subsection;
-* unresolved prerequisites that must be supplied before execution.
+B. Developer repairs
 
-Do not invent command-line flags. Derive commands from the native parser and verify them with tests or safe --help/dry-run behavior.
+The Developer must:
 
-Do not present status, application execution and rollback as one sequential paste block.
+1. reproduce the failure where safe;
+2. identify the root cause;
+3. make the smallest coherent correction;
+4. update tests for the corrected contract;
+5. update documentation when operator behavior changes;
+6. run focused tests;
+7. inspect the resulting diff;
+8. hand control back to the Manager.
 
-Include an environment matrix showing which endpoint/config source each environment uses, but never print secrets.
+The handoff must include:
 
-Phase 6 — endpoint and isolation tests
+* root cause;
+* changed files;
+* why each change is necessary;
+* focused commands and results;
+* remaining risks;
+* confirmation that no unrelated file was changed.
 
-Add or update focused tests proving:
+The Developer may not commit or push.
 
-* DEV selects only DEV configuration and endpoints.
-* PAT selects only PAT configuration and endpoints.
-* PROD selects only PROD configuration and endpoints.
-* Unknown environment fails.
-* Missing environment fails.
-* .conf/YAML/CLI mismatch fails.
-* PAT/PROD cannot fall back to DEV/local.
-* Missing or placeholder endpoints fail readiness.
-* Environment-variable mismatch fails closed.
-* Runtime status identifies the selected environment without exposing secrets.
-* NPID remains the default in all shipped profiles.
-* Root remains explicit opt-in.
-* Existing non-root walkthrough never tells the operator to become root.
-* Existing lifecycle paths remain correct for each selected profile.
-* Local fixture mode remains isolated from operational environments.
+C. Independent Tester validates from the beginning
 
-Use synthetic endpoint hostnames in tests.
+After every Developer handoff, the Tester must start a new acceptance run from Stage 0 below.
 
-Phase 7 — extraction failure safety
+The Tester must not accept the Developer’s test results as proof and must not skip directly to the previously failing test.
 
-Do not touch the real /app/clue.
+If any required stage fails:
 
-Using an isolated temporary application root, verify whether extraction or post-extraction failure can leave the current tree empty or partial.
+* stop the current acceptance run;
+* capture the earliest actionable failure;
+* return TESTER_FAIL to the Manager;
+* include reproduction steps and sanitized evidence;
+* do not edit anything.
 
-The required result is:
+The Manager then creates the next Developer ticket.
 
-* the previous tree is never replaced until the new tree is validated; or
-* it is restored automatically when installation fails.
+8. Complete acceptance pipeline
 
-If the current behavior is unsafe, apply only the smallest fail-safe correction and add bounded failure-injection and idempotency tests. Do not redesign the deployment framework or add broad production locking in this task.
+The Tester must execute these stages in order after every repair.
 
-Phase 8 — verification
+Stage 0 — Source and scope integrity
 
-Run:
+Verify:
 
-1. relevant configuration/loader tests;
-2. environment-selection tests;
-3. installer and operational-wrapper tests;
-4. runtime-secret wrapper tests;
-5. lifecycle/readiness tests;
-6. archive/layout tests;
-7. shell syntax checks;
-8. the full repository suite after focused tests pass.
+* repository root;
+* branch and full HEAD;
+* working-tree changes;
+* unrelated changes preserved;
+* required skill and deployment files exist;
+* no prohibited file was modified;
+* DEV configuration is explicit;
+* no secret-bearing file is staged for packaging.
 
-Report exact commands, pass/fail/skip counts and elapsed results. Do not reuse earlier test counts as new evidence.
+Stage 1 — Static and syntax checks
 
-Phase 9 — replace the stale test artifact safely
+Run all relevant syntax and static checks, including:
 
-After implementation and tests pass, read and follow:
+* bash -n on every shipped shell script;
+* Python syntax/import checks where appropriate;
+* configuration parsing;
+* installer argument validation;
+* documentation/config drift tests;
+* environment-name validation.
 
-.github/skills/clue-test-release/SKILL.md
+Stage 2 — Focused functional tests
 
-Build exactly one new test-only artifact from the current Deliverables/ tree.
+Run focused tests covering at least:
 
-The Maven Assembly artifact is intentionally rootless because includeBaseDirectory=false. Validate one logical rootless payload namespace containing only approved top-level paths such as deploy/, config/, src/, tests/, tools/ and documentation. Do not require a wrapper directory.
+* DEV/PAT/PROD configuration selection without contacting them;
+* rejection of missing and invalid environments;
+* DEV endpoint selection;
+* prevention of cross-environment fallback;
+* deployment identity and EXPECT_HOST;
+* NPID-first behavior;
+* refusal of unauthorized root execution;
+* exact command-scoped sudoers generation;
+* the four Salt Pillar reads;
+* PTY and no-TTY wrapper execution;
+* unencrypted-key acceptance;
+* encrypted-key prompt prevention;
+* certificate/private-key mismatch;
+* flattened-secret reconstruction;
+* archive layout and required members;
+* secret and private-key exclusion;
+* mandatory SHA-256 use;
+* rollback/recovery behavior for an existing application root.
+
+Stage 3 — Full repository regression suite
+
+Run the repository’s complete supported test suite from a fresh test process.
+
+Required outcome:
+
+* zero failed tests;
+* zero unexpected errors;
+* every skip counted and classified;
+* no reduction in coverage caused by disabling or weakening tests.
+
+A passing subset is not sufficient.
+
+Stage 4 — Fresh test artifact
+
+Use the verified repository-local test-release skill if it exists and is applicable.
+
+Build from the current intended Deliverables/ bytes in isolation.
 
 Requirements:
 
-* do not overwrite /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz;
-* do not reuse the old artifact’s identity or checksum;
-* use the current 12-character SHA and dirty marker required by the skill;
-* use a new immutable filename;
-* verify Deliverables-only byte provenance;
-* validate paths, types, executable modes, extraction and layout;
-* confirm the new environment profiles and current non-root installer are present;
-* confirm the stale root-default installer is absent;
-* scan for secrets, PEMs, private keys, .env and build debris;
-* compute SHA-256;
-* create <artifact-name>.sha256 using the standard format even if the older skill treated the sidecar as optional;
-* validate the sidecar against the final bytes;
-* do not publish or deploy.
+* unique filename containing current identity;
+* dirty marker when packaged payload bytes are dirty;
+* no overwrite of existing artifacts;
+* rootless layout when required by the Assembly contract;
+* only approved payload paths;
+* required executable modes;
+* relative, traversal-safe paths;
+* no links, devices, FIFOs, setuid/setgid, or world-writable members;
+* no .env, credential file, private key, real certificate, token, password, or embedded secret;
+* successful extraction;
+* extracted bytes matching the intended Deliverables/ source;
+* SHA-256 calculated and written to a matching sidecar;
+* sidecar digest verified before any installation.
 
-If necessary, make the smallest update to the test-release skill so future successful builds create and validate the sidecar without overwriting existing artifacts.
+Record filename, absolute path, size, member count, full SHA-256, HEAD and dirty status.
 
-Hard boundaries
+Stage 5 — Isolated clean-room installation
 
-Do not:
+Install the new artifact into a newly created temporary application root.
 
-* change CI/CD files;
-* change Salt formulas;
-* publish to Nexus;
-* deploy to DEV/PAT/PROD;
-* modify the real /app/clue;
-* contact live providers or secret stores;
-* create a PR/MR;
-* merge;
-* commit, push or tag;
-* invent PAT/PROD identities, hosts or endpoints;
-* overwrite or delete the stale artifact.
+Use:
 
-Final report
+--environment dev
 
-Start with exactly one:
+but do not contact live providers.
 
-* ENVIRONMENT_AWARE_INSTALL_READY_FOR_REVIEW
-* ENVIRONMENT_AWARE_INSTALL_BLOCKED_BY_MISSING_VALUES
-* ENVIRONMENT_AWARE_INSTALL_VERIFICATION_FAILED
+Validate:
 
-Report:
+* preflight;
+* checksum;
+* extraction;
+* expected layout;
+* environment configuration selection;
+* generated runtime material permissions;
+* NPID-oriented ownership behavior;
+* application startup/help command;
+* offline fixture execution;
+* uninstall/cleanup where supported.
 
-1. Git state and changed files.
-2. Final configuration ownership and precedence.
-3. DEV/PAT/PROD environment matrix.
-4. Exact endpoint source for each environment.
-5. Unresolved environment values and responsible owner/input needed.
-6. Installer/runtime environment-selection behavior.
-7. Non-root and root-exception behavior.
-8. Extraction-failure result.
-9. Focused and full-suite results.
-10. Updated runbook sections and exact installation commands.
-11. New artifact path, filename, size and SHA-256.
-12. Sidecar path and validation result.
-13. Rootless archive member summary and secret scan.
-14. Explicit confirmation that no commit, push, PR, publication, deployment, live /app/clue mutation or provider call occurred.
+Stage 6 — Existing-root failure injection
+
+Before touching /app/clue, prove in an isolated root that a failure during replacement cannot leave an unusable partial application.
+
+Inject safe failures at relevant boundaries, such as:
+
+* extraction failure;
+* validation failure;
+* activation failure;
+* interrupted replacement.
+
+Required result:
+
+* old version remains usable, or
+* automatic rollback restores it, or
+* installer stops before mutating the active tree.
+
+If this cannot be demonstrated, return:
+
+DEV_INSTALL_UNSAFE_TO_RETRY
+
+Do not proceed to the real DEV root.
+
+Stage 7 — Controlled real DEV preflight
+
+Proceed only when Stages 0–6 pass.
+
+Confirm without exposing secrets:
+
+* execution is on the approved DEV host;
+* EXPECT_HOST matches;
+* current identity is exactly tclue999devs, unless the documented installer uses a narrowly approved transition;
+* application root resolves exactly to /app/clue;
+* environment resolves exactly to dev;
+* no other installation process is active;
+* adequate disk space and permissions exist;
+* current installation and recovery state are known;
+* artifact SHA-256 matches its sidecar;
+* required Salt commands are authorized non-interactively;
+* no live provider operation will occur.
+
+If this session is not actually connected to the approved DEV host, return a blocker. Do not pretend that a local clean-room installation is the DEV installation.
+
+Stage 8 — Controlled DEV installation
+
+Run the exact documented installer command using:
+
+* the newly verified artifact;
+* its mandatory SHA-256;
+* explicit --environment dev;
+* approved /app/clue root;
+* approved NPID contract.
+
+Capture sanitized exit codes and structural evidence only.
+
+Never include Pillar values, reconstructed PEM bytes, or secret-bearing command output in reports.
+
+If installation fails:
+
+1. stop application execution;
+2. preserve diagnostic evidence;
+3. verify or perform documented recovery;
+4. prove /app/clue is not left partially active;
+5. return the failure to the Manager;
+6. repair through the Developer;
+7. rebuild a uniquely named artifact;
+8. restart testing at Stage 0.
+
+Stage 9 — DEV smoke execution
+
+After installation, run only an approved offline/fixture smoke scenario.
+
+Prove:
+
+* the installed application selects dev;
+* it reads the DEV runtime configuration;
+* the selected endpoint identifiers are DEV values, using redacted or structural evidence;
+* no PAT or Production configuration is loaded;
+* runtime-secret retrieval succeeds structurally without printing values;
+* the application command exits successfully;
+* expected non-secret output is produced.
+
+Do not run a live Symcor or Tungsten transaction.
+
+9. Autonomous continuation and circuit breaker
+
+Ordinary failures must automatically cycle:
+
+Tester FAIL
+→ Manager classifies
+→ Developer repairs
+→ Manager reviews scope
+→ Tester restarts at Stage 0
+
+Do not stop merely because the first implementation fails.
+
+Stop and request owner input only for:
+
+* missing authorization;
+* missing or contradictory owner-controlled values;
+* unavailable DEV access;
+* missing approved artifact publication when documentation requires Nexus;
+* required PAT/Production interaction;
+* required live-provider interaction;
+* secret-store or permission changes outside repository scope;
+* destructive recovery with uncertain target;
+* a necessary prohibited-scope change.
+
+Apply a no-progress circuit breaker if:
+
+* the same root cause remains after two materially different repairs;
+* three consecutive iterations do not reduce or change the failure;
+* evidence contradicts the documented DEV identity or host;
+* continuing could damage an existing /app/clue.
+
+Return a precise blocker report rather than looping indefinitely.
+
+10. Nexus rule
+
+Inspect the current deployment documentation to determine whether DEV installation requires downloading from an approved immutable Nexus URL.
+
+If Nexus is required and the current artifact has not been published to an explicitly approved destination, stop with:
+
+NEXUS_PUBLICATION_REQUIRED
+
+Include:
+
+* local artifact path;
+* filename;
+* byte size;
+* full SHA-256;
+* required destination pattern;
+* exact next authorized action.
+
+Do not upload automatically and do not replace the historical f676277 artifact.
+
+If the documented DEV procedure explicitly permits a locally built artifact, follow that procedure without inventing a Nexus requirement.
+
+11. Completion authority
+
+Only the Independent Tester may produce TESTER_PASS.
+
+Only the Manager may convert that into the final verdict:
+
+DEV_INSTALL_LOOP_PASS
+
+The final report must state:
+
+* branch and full HEAD;
+* clean/dirty payload status;
+* pre-existing versus workflow changes;
+* iteration count;
+* defects found and fixed;
+* exact changed files;
+* focused and full-suite test counts;
+* skipped tests and reasons;
+* artifact filename, size and full SHA-256;
+* sidecar verification;
+* archive and secret-scan results;
+* clean-room installation result;
+* failure-injection/recovery result;
+* actual DEV host, account and application root;
+* exact sanitized installation command;
+* installed version identity;
+* offline DEV smoke result;
+* unresolved risks;
+* confirmation that no PR, commit, push, publication, PAT/Production action, or live-provider call was performed.
+
+Alternative terminal verdicts are:
+
+* MULTI_AGENT_CAPABILITY_UNAVAILABLE
+* DEV_INSTALL_LOOP_BLOCKED
+* DEV_INSTALL_UNSAFE_TO_RETRY
+* NEXUS_PUBLICATION_REQUIRED
+* DEV_INSTALL_LOOP_NO_PROGRESS
+
+Do not describe a test artifact or DEV installation as Production-ready, approved, signed, promoted, or live-provider certified.
