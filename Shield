@@ -1,135 +1,97 @@
-Accept the read-only audit verdict:
+Continue from the current working tree and complete the correction work. Do not restart, restore older files, discard changes, commit, push, publish, or modify CI/CD or pom.xml.
 
-RUNBOOK_PARTIALLY_MATCHES_CORRECTIONS_REQUIRED
+Authoritative ownership boundary
 
-Do not install yet. Resolve D-1, D-2 and D-3, update the runbook to match the resulting code, rebuild a uniquely identified artifact, and repeat the read-only audit. Installation is authorized only after the repeated verdict is RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED.
+Implement and document this exact operational contract:
 
-Maintain a single writer. Preserve unrelated staged and working-tree changes. Do not reset, checkout, clean, stash or restore whole files. Do not modify CI/CD, pom.xml, assembly.xml, Salt infrastructure or system sudoers. Do not commit, push, publish or contact Symcor/Tungsten.
+1. The human deployment operator downloads the exact artifact and places it in a transfer/inbound location.
+2. The operator does not extract or own the installer staging tree.
+3. The NPID creates its own private staging directory, extracts the selected installer/configuration files, runs preflight, and performs the installation.
+4. The NPID owns the installed /app/clue tree and runs the application.
+5. The interactive DEV exception may use ordinary TTY-based sudo -u <NPID> -H -- ..., but passwords must never be piped, stored, logged, supplied through sudo -S, or handled by automation.
+6. This interactive exception does not replace the unattended AutoSys/passwordless production contract.
 
-D-1 — eliminate ambiguous artifact selection
+Phase A — finish all corrections before testing
 
-The runbook currently derives:
+Do not run focused tests, the full regression suite, build an artifact, transfer anything, invoke sudo, retrieve Pillar values, contact providers, or touch /app/clue during this phase.
 
-/tmp/clue-code-1.1.4-SNAPSHOT.tar.gz
+Complete every known correction first:
 
-but that path contains a different older artifact. The audited artifact was renamed externally and must not be rediscovered by a broad glob.
+* Finish D-1 artifact acquisition and provenance:
+    * explicit absolute artifact path;
+    * mandatory non-empty builder-provided SHA-256;
+    * no filename derivation, broad glob, or guessed snapshot filename;
+    * clearly separate external/manual acquisition from Nexus acquisition;
+    * operator-owned inbound artifact followed by NPID-owned extraction/staging.
+* Finish D-2 secret-stage behavior and documentation:
+    * exactly four approved Salt Pillar lookups;
+    * no secret value printed, persisted, or placed in reports;
+    * fail closed on missing, malformed, empty, or cryptographically invalid material;
+    * guaranteed cleanup;
+    * no Symcor or Tungsten provider call during installation validation.
+* Finish D-3 legacy adoption and rollback:
+    * explicit --adopt-legacy <environment>;
+    * value must equal --environment;
+    * only a missing marker may be adopted;
+    * malformed or contradictory markers remain rejected;
+    * verify host, NPID, group, ownership, and mode before mutation;
+    * backup must carry enough validated environment metadata to support both automatic and manual rollback;
+    * cross-environment rollback must remain impossible.
+* Correct all runbook contradictions:
+    * staging ownership wording;
+    * root versus unprivileged secret-stage behavior;
+    * exit code 11;
+    * stale versions and cross-references;
+    * fixtures-only labeling;
+    * manual DEV exception;
+    * PAT/Production status: identities are configured, while only unresolved external endpoint values remain unconfirmed.
+* Investigate the package-index failure without assuming that Nexus is unavailable:
+    * compare the exact URL in dev.conf, YAML, preflight code, installer code, and the previously working configuration;
+    * distinguish the Nexus homepage from the exact PyPI /simple/ endpoint;
+    * inspect trailing-slash, redirect, GET-versus-HEAD, certificate, proxy, and authentication behavior;
+    * ensure Preflight validates the same access path that actual dependency installation will use;
+    * do not replace the PyPI repository with the raw artifact repository;
+    * never expose credentials in output.
 
-Correct the contract so that:
+Before testing, produce a closure matrix containing every audit finding, its corrected file and line range, the resulting behavior, and its acceptance command. Do not ask for confirmation after each edit; complete Phase A first.
 
-* A manually supplied artifact always requires an explicit absolute ARCHIVE path.
-* EXPECTED_SHA256 is supplied by the builder and is mandatory for this DEV acceptance run.
-* The runbook never derives or guesses a manual-upload filename from RELEASE.
-* The exact artifact path and SHA-256 are verified before staging.
-* No existing artifact is overwritten or silently reused.
-* Nexus download and manually supplied archive are documented as separate acquisition modes.
-* First-install Nexus bootstrap explicitly receives the repository location externally because package profiles cannot be read before acquisition.
-* After staging, the package’s profile must agree with the supplied environment/repository assertions.
-* Stale 1.1.3-SNAPSHOT examples, the incorrect “Step 4” reference and obsolete filenames are corrected.
-* Exit code 11 is added to the documented table.
-* PAT/Production documentation marks only genuinely unresolved external values as UNCONFIRMED; do not describe already confirmed host/NPID/root values as unknown.
+Phase B — sequential gated validation
 
-Do not hardcode the current temporary test-artifact path into permanent product logic. The current execution example may show its exact path and checksum, clearly labelled as session-specific.
+After Phase A is complete, validate one gate at a time. Do not run gates in parallel and do not launch repeated full-suite runs during individual fixes.
 
-D-2 — document and secure the authorized Pillar check
+For every gate:
 
-Owner authorization for the eventual real DEV install:
+1. Print the exact command.
+2. Execute it if it requires no interactive password or external provider contact.
+3. Record exit code and exact pass/fail counts.
+4. On failure, stop progression, classify the failure, repair it, and rerun the same gate.
+5. Move to the next gate only after the current gate is green.
 
-* The installer may retrieve the four real runtime values through the existing Salt Pillar wrapper.
-* This authorization applies only to the final interactive DEV installation after the new audit passes.
-* It does not authorize provider calls.
-* It does not authorize printing, logging or persisting secret values.
-* It does not authorize .env or arbitrary process-environment credential fallback.
+Use this order:
 
-Verify and test that the secrets stage:
+1. Shell syntax and Python import/compile checks.
+2. Focused D-1 acquisition/provenance tests.
+3. Focused D-2 secret-boundary tests using mocks only.
+4. Focused D-3 adoption, injected-failure, automatic rollback, manual rollback, and cross-environment refusal tests.
+5. Runbook-to-code contract tests.
+6. Runtime-environment and non-root identity suites.
+7. One bounded-worker or serial full repository regression run. Do not use pytest -n auto.
+8. Build one new uniquely named post-fix test artifact.
+9. Verify its manifest, safe paths, member set, byte parity, size, and SHA-256.
+10. Transfer that exact new artifact to a unique DEV inbound path and verify remote SHA-256.
+11. Perform a fresh read-only runbook-to-code and artifact audit.
 
-* runs only after environment/profile/host/NPID agreement;
-* performs exactly the intended four Pillar lookups;
-* uses the existing constrained runtime-secret path;
-* never prints secret values;
-* does not print shortened key fingerprints or temporary key/certificate paths;
-* creates any temporary certificate/key material with the required ownership and permissions;
-* cleans temporary material on success and handled failure/signals;
-* performs cryptographic validation and fails closed if OpenSSL is unavailable;
-* performs no Symcor or Tungsten call;
-* reports only a redacted success/failure summary.
+Both previously seen artifacts are stale for final installation:
 
-Update the runbook to state plainly that a normal non-dry-run installation performs this real Pillar readiness check. Distinguish it from provider execution.
+* /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz with SHA beginning a6ea...
+* the earlier audited artifact with SHA beginning 25ce...
 
-Resolve the documentation contradiction around /etc/sudoers.d/clue-runtime-secrets:
+Do not install either one because the installer source has changed since they were built.
 
-* administrative/root bootstrap may provision it;
-* an ordinary NPID/non-root install may only validate and use the pre-existing authorization;
-* an ordinary install must never create or modify sudoers.
+Only after the new artifact passes all gates may the DEV interactive phase begin. At any password-required step, print exactly one command and pause for the operator to run it in a real TTY. Never request or capture the password.
 
-Do not retrieve real Pillar values during this correction/build/audit turn.
+The final report must clearly state either:
 
-D-3 — safe first upgrade from a markerless legacy installation
+RUNBOOK_MATCHES_NEW_ARTIFACT_SAFE_FOR_INTERACTIVE_DEV_PREFLIGHT
 
-The existing DEV /app/clue predates config/active_environment. Current rollback cannot safely restore that markerless backup.
-
-Implement a minimal explicit first-upgrade contract. Requirements:
-
-* A markerless existing installation must fail closed before mutation unless the operator supplies an explicit legacy-adoption option.
-* The option must name the environment and must exactly equal --environment.
-* Adoption must also require the selected profile’s expected host, NPID, group and /app/clue ownership to match.
-* Missing marker may be adopted; malformed, multi-line, symlinked, unknown or contradictory markers must never be adopted.
-* The current live tree must not be silently relabelled.
-* The backup must carry sufficient verified metadata so rollback restores the legacy application together with a valid config/active_environment.
-* Rollback must remain same-environment only.
-* A failed installation after backup must be able to restore the adopted legacy backup automatically.
-* The action and selected environment must be clearly reported without exposing secrets.
-
-Choose a clear option name based on the existing CLI style. Document it only under a separately labelled “first upgrade from a pre-marker installation” section.
-
-Add behavioral tests proving:
-
-1. markerless tree without the explicit option fails before mutation;
-2. mismatched adoption environment fails;
-3. wrong host/NPID/ownership fails;
-4. valid DEV adoption creates a recoverable backup;
-5. injected installation failure restores the legacy bytes plus valid DEV marker;
-6. manual rollback restores the adopted backup;
-7. cross-environment restore remains refused;
-8. normal installations with a valid marker remain unchanged.
-
-Remaining documentation corrections
-
-Apply the audit’s evidence-backed corrections:
-
-* Reword the preflight staged-path requirement to match the actual initiator ownership rule; do not call it root-owned.
-* Split the secrets-stage description by root/bootstrap versus ordinary NPID mode.
-* Label section 1.8 explicitly as fixtures-only offline evidence.
-* State that it does not prove live Symcor/Tungsten readiness.
-* Keep the interactive-password DEV test as a separately labelled manual exception, never as the normal passwordless procedure.
-* Document that the NPID must extract/own its own staged installer copy before the interactive command is run.
-* Preserve the normal passwordless/AutoSys requirement as unresolved until exact NOPASSWD delegation or direct NPID execution is available.
-
-Verification loop
-
-After the changes:
-
-1. Run focused installer, rollback, environment, runtime-secret, wrapper and documentation tests.
-2. Run shell syntax checks.
-3. Run the complete regression suite on a stable tree.
-4. Require zero implementation failures.
-5. Record all skips and prove none hides the changed behavior.
-6. Build a new uniquely named test artifact without modifying pom.xml or assembly.xml.
-7. Record its exact size, member count and SHA-256.
-8. Validate archive safety and source/package byte parity.
-9. Transfer it to a new unique DEV staging path without overwriting existing artifacts.
-10. Verify local and remote SHA-256 equality.
-11. Repeat the strict read-only runbook-to-code audit against the new packaged bytes.
-
-Do not perform the actual installation, invoke interactive sudo or retrieve Pillar secrets in this turn.
-
-Return:
-
-* changed files and reasons;
-* the chosen legacy-adoption CLI contract;
-* focused and full-suite commands, exits and counts;
-* new artifact identity and local/remote checksum evidence;
-* updated runbook-to-code compatibility matrix;
-* confirmation that /app/clue remained untouched;
-* final verdict.
-
-Only RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED authorizes the following interactive installation turn. Otherwise stop with the remaining exact blockers.
+or list the first unresolved blocker. Do not claim installation readiness merely because the test suite is green.
