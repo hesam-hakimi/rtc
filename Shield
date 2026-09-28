@@ -1,183 +1,274 @@
-WAIT. Do not re-apply, undo, restore, reset, stash, clean, checkout, commit, or overwrite any file yet.
+New owner clarification changes the recovery interpretation.
 
-A concurrent session has modified the same working tree. Treat this as a source-integrity incident, not as an ordinary implementation failure.
+The concurrent changes were not necessarily accidental corruption. Another authorized agent was intentionally modifying the installer so that the person invoking installation would not be required to log in as the target NPID.
 
-Immediate objective
+Treat both work streams as valid candidate work that must be reconciled:
 
-Preserve every current change, identify the concurrent writer, reconcile the files safely, and establish one authoritative Manager-controlled session before resuming Phase 6.
+1. environment-aware deployment/configuration and endpoint isolation;
+2. installation initiated by an authorized non-NPID operator.
 
-Step 1 — Freeze all writes
+Do not blindly restore either agent’s complete version.
 
-Stop all implementation and test activity.
+First: establish a single writer
 
-Do not modify any tracked or untracked repository file.
+Before continuing, confirm that every other agent/session has stopped editing this working tree.
 
-Ask me to close or stop every other active agent/session only if you cannot verify that they are already inactive.
+If another writer is still active, stop with:
 
-There must be exactly one active Manager session before recovery begins.
+CONCURRENT_WRITER_STILL_ACTIVE
 
-Do not click or invoke any bulk Undo/Keep/revert operation that could affect another session’s work.
+Do not use:
 
-Step 2 — Capture read-only evidence
+* bulk Undo;
+* Git reset;
+* Git clean;
+* checkout-based restoration;
+* stash;
+* whole-file replacement from an older copy.
 
-Using read-only commands, record:
+Preserve a byte-for-byte recovery snapshot of all changed and untracked files outside the repository before modifying anything.
 
-git status --short --branch
-git rev-parse HEAD
-git branch --show-current
-git diff --name-status
-git diff --stat
-git diff
-git ls-files --others --exclude-standard
+Restart analysis from the current working tree
 
-For every currently changed file, record:
+Discard the earlier assumption that all externally modified files should be reverted.
 
-* path;
-* current SHA-256;
-* modification time;
-* tracked/untracked state;
-* diff against HEAD;
-* whether this session intentionally edited it;
-* whether the evidence indicates another session edited it.
+Restart the engineering analysis from Phase 0 using:
 
-Do not print secrets or secret material.
+* the current working-tree bytes;
+* the diff against HEAD;
+* current call sites;
+* current tests;
+* current deployment documentation;
+* both agents’ surviving changes.
 
-Save the sanitized recovery evidence outside the repository in a unique temporary directory.
+Previous passing test counts are historical only. They must not be used as evidence for the reconciled tree.
 
-Also preserve a byte-for-byte recovery copy of every changed and untracked file outside the repository before any reconciliation. This is a recovery snapshot, not a commit or stash.
+Required target contract
 
-Step 3 — Establish the collision map
+Distinguish these identities explicitly:
 
-At minimum, investigate:
+Installation initiator
+
+The installation command may be initiated by:
+
+* the configured NPID;
+* an approved deployment/service account;
+* an explicitly authorized administrator for bootstrap or recovery.
+
+The initiator is not automatically required to be the target NPID.
+
+Runtime owner
+
+The installed application files, runtime directories and normal application process must belong to and run as the environment’s configured NPID.
+
+For DEV, current owner-supplied evidence identifies:
+
+tclue999devs
+
+Do not hard-code that DEV account into PAT or Production.
+
+PAT and Production must obtain their NPID values from their own deployment profiles. Unknown values must remain explicit blockers.
+
+Privilege behavior
+
+Normal installation must not:
+
+* ask for the owner’s personal password;
+* use interactive sudo;
+* use sudo -S;
+* use sudo -i;
+* use su -;
+* use sshpass, expect or SUDO_ASKPASS;
+* persist credentials;
+* grant broad root access.
+
+All automated privileged commands must use a previously approved noninteractive path such as narrowly scoped sudo -n.
+
+If an approved noninteractive privilege path is absent, fail before modifying the installation root and report:
+
+PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
+
+Do not weaken controls merely to allow any user to install.
+
+Important semantic rule
+
+“NPID is not required to invoke the installer” must not become any of the following:
+
+* NPID ownership is optional;
+* the application runs under the invoking user;
+* an arbitrary user may select an arbitrary owner;
+* host or account validation is bypassed;
+* /app/clue becomes writable by broad groups or everyone;
+* the installer silently falls back to the current user;
+* DEV identity is reused for PAT or Production;
+* root becomes the normal runtime owner.
+
+The target NPID must come from the selected environment deployment profile, not from an unrestricted command-line value.
+
+Reconcile the two work streams
+
+Build a semantic collision map for every overlapping file.
+
+For each file, identify:
+
+* environment/endpoint behavior added by the first work stream;
+* caller-identity behavior added by the second work stream;
+* behavior currently present;
+* behavior currently missing;
+* conflicting tests or documentation;
+* the minimal combined implementation.
+
+Pay particular attention to the native paths corresponding to:
 
 envsettings.py
 batch.py
 config.py
-pyproject.toml
-README.md
-test_environment_lifecycle.py
-test_deliverables_layout.py
+clue_install_release.sh
+clue_operational_wrapper.sh
+clue_preinstall_check.sh
+deployment_env_conf/dev.conf
+deployment_env_conf/pat.conf
+deployment_env_conf/prod.conf
+environments/dev.yaml
+environments/pat.yaml
+environments/prod.yaml
+CLUE_OPERATIONAL_DEPLOYMENT.md
 test_environment_selection.py
+test_environment_lifecycle.py
+test_install_release.py
+test_preinstall_check.py
+test_operational_wrapper.py
+test_deliverables_layout.py
 
-Confirm the exact native paths before acting.
+Resolve actual paths from the repository; do not assume these abbreviated names are complete.
 
-Current reported evidence suggests:
+Repair the current broken import surgically
 
-* envsettings.py was overwritten after this session’s edits;
-* batch.py still imports assert_endpoints_resolved;
-* the current envsettings.py no longer defines that symbol;
-* current imports are therefore broken;
-* pyproject.toml, README.md, test_environment_lifecycle.py, and test_deliverables_layout.py were changed by another writer;
-* Phase 6 cannot currently be accepted;
-* prior passing results predate the overwrite and are no longer current evidence.
+The current evidence reports that batch.py imports assert_endpoints_resolved while the current envsettings.py no longer defines it.
 
-Verify each statement from repository bytes.
-
-Step 4 — Do not perform a whole-file restore
-
-Once all other writers are confirmed stopped, reconcile file by file.
-
-Do not restore an old complete copy of envsettings.py, because that could destroy legitimate later changes from the other session.
+Do not solve this by restoring an entire older envsettings.py.
 
 Instead:
 
-1. inspect the current file;
-2. inspect the preserved recovery snapshot;
-3. inspect the diff against HEAD;
-4. inspect all current call sites and tests;
-5. reconstruct only the missing required behavior on top of the latest stable bytes.
+1. inspect current call sites;
+2. inspect current tests;
+3. inspect current configuration contracts;
+4. identify the intended endpoint-validation API;
+5. restore or replace only the behavior that remains required;
+6. preserve compatible improvements from both work streams.
 
-For envsettings.py, verify whether the intended contract still requires:
+Also assess the reportedly missing:
 
-* assert_endpoints_resolved;
 * log-path support;
-* all Tungsten RUN_KEYS;
-* OPTIONAL_PATH_KEYS;
-* ${VAR:-default} expansion;
-* environment isolation;
-* endpoint-resolution validation.
+* Tungsten runtime keys;
+* optional path keys;
+* ${VAR:-default} expansion.
 
-Do not add any symbol merely because it appeared in an earlier draft. Require a current call site, test contract, configuration contract, or documented requirement.
+Restore each only when current repository evidence proves it belongs in the intended contract.
 
-For files changed only by the other session, preserve them unless they demonstrably conflict with the approved deployment/configuration scope.
+Required identity test matrix
 
-Step 5 — Enforce single-writer management
+After reconciliation, test all of these cases for DEV, PAT and Production using isolated temporary roots:
 
-After recovery, operate as the sole Manager.
+Initiator	Expected result
+Correct environment NPID	Installation succeeds without a password
+Approved non-NPID deployment account with exact noninteractive privilege	Installation succeeds; final owner remains configured NPID
+Unauthorized non-NPID user	Fails before mutation
+Root in documented explicit bootstrap/recovery mode	Allowed only through the explicit exception
+Root through normal operator path	Rejected
+Missing target NPID	Fails before mutation
+Unknown target NPID	Fails before mutation
+Password prompt attempted	Immediate failure
+Wrong environment NPID	Fails before mutation
+Arbitrary owner supplied by CLI	Rejected
+Missing exact sudoers authorization	Fails before mutation
+Broad unsafe sudoers authorization	Reported as unsafe, not accepted as proof
 
-Create exactly two managed sub-agents:
+Verify after successful installation that:
 
-* Deployment Developer;
-* Independent Deployment Tester.
+* files and directories have the configured NPID ownership;
+* runtime execution occurs as that NPID;
+* the initiator does not remain the runtime owner;
+* no directory is made world-writable;
+* environment configuration cannot select another environment’s account or endpoints.
 
-Only the Developer may edit files.
+Environment and endpoint tests
 
-The Tester must remain read-only and may run only after the Developer returns control.
+For each of dev, pat and prod, independently prove:
 
-Never allow the Developer and Tester to operate simultaneously against the shared working tree.
+* explicit environment selection;
+* correct deployment profile;
+* correct runtime YAML;
+* correct application root;
+* correct configured NPID;
+* correct sanitized endpoint identity;
+* no cross-environment fallback;
+* no local fallback in PAT or Production;
+* unresolved values fail closed;
+* secrets remain outside YAML and .conf;
+* no live provider call occurs.
 
-Before every handoff, record file hashes. After every handoff, verify that no unexpected file changed.
+UNCONFIRMED PAT or Production values may be preserved as explicit blockers, but they must never be treated as deployable values.
 
-If any file changes while its assigned agent is idle, stop immediately with:
+Full re-verification
 
-CONCURRENT_WRITER_DETECTED
+Once reconciliation is complete, restart verification from the beginning:
 
-Step 6 — Resume from Phase 6, not from prior PASS claims
+1. Git and scope inspection;
+2. Python import and syntax checks;
+3. bash -n for all shipped shell scripts;
+4. environment/configuration schema tests;
+5. complete initiator-versus-runtime-owner matrix;
+6. passwordless execution tests with and without a TTY;
+7. endpoint-isolation tests;
+8. installer preflight tests;
+9. archive/checksum/security tests;
+10. staged extraction and validation-before-swap tests;
+11. failure-injection, locking and rollback tests;
+12. all focused deployment/configuration tests;
+13. full repository regression suite;
+14. unique test-artifact build and SHA-256 sidecar;
+15. clean-room installation for all three environment profiles.
 
-After imports and file ownership are reconciled:
+Any repair after a Tester failure must cause the Tester to restart again from Step 1.
 
-1. run syntax and import checks;
-2. run test_environment_selection.py;
-3. run endpoint and environment-isolation tests;
-4. run the deployment/configuration scenario matrix for DEV, PAT and Production;
-5. run extraction failure-injection and rollback tests;
-6. run passwordless/noninteractive execution tests;
-7. run all focused deployment tests from a fresh process;
-8. run the complete repository regression suite;
-9. build a new uniquely named artifact only if every required test passes;
-10. generate and verify its SHA-256 sidecar;
-11. perform clean-room installation tests.
-
-Do not rely on the previously reported:
-
-144 passed
-45 passed, 1 skipped
-1166 passed, 66 skipped
-
-until those suites are rerun against the reconciled current bytes.
-
-Step 7 — Preserve current boundaries
+Current restrictions
 
 Do not:
 
 * commit;
 * push;
-* create a PR;
+* create or update a PR;
 * publish;
 * deploy;
 * mutate /app/clue;
-* contact providers;
+* contact live providers;
 * use the stale /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz;
 * overwrite an existing artifact;
+* invent PAT or Production identities;
 * request or use a personal password.
 
-Required recovery report
+Required report
 
-Before resuming implementation, report:
+Before claiming readiness, report:
 
-* whether every other writer is stopped;
-* current branch and full HEAD;
-* complete changed-file ownership map;
-* recovery snapshot location;
-* exact envsettings.py collision;
-* exact import failure;
-* files safe to preserve unchanged;
-* files requiring surgical reconciliation;
-* confirmation that no destructive Git operation occurred;
-* verdict:
+* confirmation that only one writer remains;
+* branch and full HEAD;
+* complete changed-file inventory;
+* how both work streams were preserved;
+* final distinction between installer initiator and runtime NPID;
+* exact reconciliation of envsettings.py and batch.py;
+* identity-matrix results;
+* DEV/PAT/Production configuration-matrix results;
+* passwordless-execution results;
+* focused and full-suite results;
+* unresolved external values;
+* whether the tree is ready for artifact construction.
 
-WORKTREE_STABILIZED_READY_TO_RECONCILE
+Use one of these verdicts:
 
-or
-
-CONCURRENT_WRITER_STILL_ACTIVE
+* RECONCILED_READY_FOR_FULL_VERIFICATION
+* RECONCILIATION_FAILED
+* CONCURRENT_WRITER_STILL_ACTIVE
+* PASSWORDLESS_PRIVILEGE_PREREQUISITE_MISSING
+* EXTERNAL_ENVIRONMENT_VALUES_REQUIRED
