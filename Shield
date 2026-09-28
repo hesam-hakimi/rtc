@@ -1,43 +1,107 @@
-Continue now without waiting for further confirmation.
+Simplify the current DEV installation experience. The existing operational document exposes too many installer internals and is not suitable for the immediate development-acceptance workflow.
 
-Your status assessment is accepted. Stay in Phase A and finish every remaining correction before running any test or acceptance command.
+Do not continue release gates, full regression, release re-audit, PAT/Production readiness or production certification. The owner has not provided development acceptance sign-off.
 
-Complete all listed remaining Phase A work:
+Required operator experience
 
-1. Finish the D-1 runbook rewrite:
-    * operator-owned inbound artifact;
-    * explicit absolute ARCHIVE;
-    * mandatory builder-provided SHA-256;
-    * no guessed or derived filenames;
-    * separate manual/external and Nexus acquisition modes;
-    * NPID-created and NPID-owned private staging after acquisition.
-2. Finish the D-2 runbook corrections:
-    * clearly state that a real non-dry-run installation performs the authorized four-value Pillar readiness check;
-    * distinguish readiness validation from provider execution;
-    * document that root/bootstrap may provision sudoers while ordinary NPID installation only validates and uses existing authorization;
-    * ensure ordinary installation never creates or modifies sudoers.
-3. Finish every remaining documentation correction already identified:
-    * staging ownership;
-    * exit code 11;
-    * stale 1.1.3-SNAPSHOT references;
-    * incorrect “Step 4” reference;
-    * fixtures-only meaning of section 1.8;
-    * separately labelled interactive DEV exception;
-    * PAT/Production status wording.
-4. Finish the D-3 rollback implementation review:
-    * ensure adopted backup metadata is accepted by the RESTORING path;
-    * ensure both automatic failure restoration and manual rollback restore the legacy bytes with one valid environment marker;
-    * do not declare this proven until Phase B tests demonstrate it.
-5. Complete the closure matrix for every original audit finding, including corrected file/line ranges, resulting behavior and the future Phase B acceptance command.
+The DEV operator must run one command only:
 
-Do not pause merely to report partial progress. Do not run tests, syntax checks, builds, transfers, sudo, SSH, Pillar retrieval, provider calls or installation while Phase A remains incomplete.
+bash clue_dev_bootstrap.sh
 
-Once Phase A is fully complete, explicitly print:
+The bootstrap must then provide this short interactive flow:
 
-PHASE_A_COMPLETE_READY_FOR_SEQUENTIAL_VALIDATION
+CLUE DEV Test Installation
+Artifact source:
+1. Existing file on this host
+2. Nexus
+Select [1-2]:
 
-Then begin Phase B automatically and execute its gates strictly in the previously specified order, one at a time. Stop on the first failing gate, repair only that failure, rerun the same gate, and proceed only when it is green. Do not run gates in parallel and do not run the full suite repeatedly.
+For option 1, request the exact absolute archive path.
 
-Preserve all current valid changes. Do not reset, checkout, clean, stash, commit, push, publish, modify CI/CD, pom.xml or assembly.xml, or touch /app/clue.
+For option 2, request the exact Nexus artifact URL or use the already configured DEV repository contract when the release uniquely identifies it. Do not guess among multiple artifacts.
 
-The package-index correction must remain aligned with the real pip access behavior: bounded redacted GET, redirect-aware, no credential exposure, and no substitution of the PyPI repository with the raw artifact repository.
+Then display one confirmation:
+
+Environment: dev
+NPID: tclue999devs
+Install root: /app/clue
+Artifact: <resolved path or URL>
+Continue? [y/N]
+
+After confirmation, the bootstrap must:
+
+1. Acquire or locate the archive.
+2. Confirm it is a readable, non-empty gzip/tar archive.
+3. Calculate and display its SHA-256. If an expected builder checksum or Nexus checksum is available, compare it; otherwise label the test artifact checksum as locally calculated without blocking this development test.
+4. Keep the inbound archive outside /app/clue.
+5. Invoke one ordinary interactive TTY command as tclue999devs.
+6. Allow the owner to type the sudo password directly in the terminal.
+7. Never read, pipe, capture, log or store the password.
+8. Have the NPID create and own a private mktemp staging directory.
+9. Extract the required packaged installer and DEV configuration into that staging directory.
+10. Invoke the existing clue_install_release.sh; do not create a second installation engine.
+11. Pass --environment dev, the exact archive and the selected test release.
+12. Detect the existing markerless /app/clue. For this known first DEV upgrade, request one clear confirmation and then pass the existing --adopt-legacy dev option.
+13. Stop immediately on the first real error and print:
+    * failed step;
+    * exact non-secret error;
+    * whether /app/clue was modified;
+    * whether automatic restoration occurred.
+14. On success, print only:
+    * installed release;
+    * artifact SHA-256;
+    * active environment;
+    * /app/clue owner/group;
+    * the next command for the team to begin DEV functional testing.
+
+Simplification boundaries
+
+The operator must not manually:
+
+* export ENVIRONMENT, RELEASE, TMP_ROOT, ARCHIVE, STAGE or checksum variables;
+* create the staging directory;
+* extract individual archive members;
+* run grep;
+* run preflight separately;
+* run a separate dry-run;
+* determine direct versus delegated mode;
+* invoke multiple installation commands;
+* run release gates or rollback certification.
+
+Those checks may remain inside the bootstrap or existing installer, but they must not appear as separate operator steps.
+
+Do not remove the existing detailed technical reference. Restructure CLUE_OPERATIONAL_DEPLOYMENT.md so its beginning contains:
+
+1. DEV Test Installation — Quick Start
+2. the single bootstrap command;
+3. the two source choices;
+4. the interactive-password notice;
+5. success and failure outputs.
+
+Move the detailed acquisition, staging, preflight, sudoers, secret, dependency, rollback, PAT, Production, exit-code and internal-stage explanations under a clearly labelled Technical Reference — Not Required for DEV Quick Start.
+
+Development acceptance only
+
+Build exactly one uniquely named test artifact containing the bootstrap and current installer changes. Do not publish it as a release.
+
+Perform only minimum checks needed for this scenario:
+
+* shell syntax;
+* archive readability;
+* bootstrap can select both acquisition choices;
+* NPID staging ownership;
+* correct arguments are passed to the existing installer.
+
+Do not run the full regression suite.
+
+Return:
+
+* changed files;
+* the single operator command;
+* test-artifact path, size and SHA-256;
+* the exact interactive command that will request the owner’s password;
+* status:
+
+DEV_TEST_ARTIFACT_READY_FOR_OWNER_INSTALL
+
+Do not claim DEV acceptance or release readiness. Both require the owner’s later explicit sign-off.
