@@ -1,272 +1,201 @@
-Investigate whether a normally installed CLUE application uses the real Symcor and Tungsten endpoints during operational batch execution, or can silently run against fixtures, replay data, loopback/local services, or simulators.
-
-This is a separate read-only investigation. Do not implement or repair anything.
-
-Use English for all engineering output.
-
-Critical distinction
-
-Do not equate these two concepts:
-
-* installer --dry-run versus real installation;
-* application offline/fixture mode versus live-provider mode.
-
-A non-dry-run installation should install and validate the application without contacting providers. Real Symcor/Tungsten requests should occur only later, when the installed operational batch is intentionally run in live mode.
-
-The investigation must determine whether the supported post-install operational command selects live providers safely.
-
-Read-only boundaries
-
-* Do not edit, create, delete, restore, format, stage, or rewrite files.
-* Do not commit, push, fetch, merge, rebase, stash, reset, clean, checkout, tag, or update a PR.
-* Do not build, install, publish, deploy, or mutate /app/clue.
-* Do not run a non-dry-run installer.
-* Do not call live Symcor, Tungsten, Salt, Vault, Nexus, or any other external service.
-* Do not retrieve or expose secrets.
-* Do not request the owner’s password.
-* Report findings in chat only.
-
-Concurrent-change protection
-
-Another session is actively implementing the application runtime-environment contract.
-
-At the start and end, record:
-
-* repository root;
-* branch and full HEAD;
-* concise Git status;
-* hashes of all examined implementation and configuration files.
-
-Pay particular attention to:
-
-* batch.py;
-* envsettings.py;
-* config.py;
-* Symcor/Tungsten provider modules;
-* clue_operational_wrapper.sh;
-* clue_with_runtime_secrets.sh;
-* clue_install_release.sh;
-* DEV/PAT/Production deployment profiles;
-* DEV/PAT/Production YAML files;
-* operational documentation;
-* relevant tests.
-
-If any relevant file changes during the investigation, identify it and mark affected conclusions:
-
-PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE
-
-Do not issue a definitive verdict from a mixture of revisions.
-
-Questions to answer
-
-1. What provider mode is selected by default in each of:
-    * DEV;
-    * PAT;
-    * Production;
-    * local development.
-2. Which supported values exist, such as:
-    * fixtures;
-    * replay;
-    * loopback;
-    * local-service;
-    * live.
-3. What happens when provider_mode is missing?
-4. Does an installed operational run ever default to fixtures?
-5. Does a successful non-dry-run installation change or persist provider mode?
-6. What exact command is documented and implemented for AutoSys/normal operational execution?
-7. Does that command explicitly or implicitly select live?
-8. Can the new operational-wrapper handoff launch clue.batch without live mode?
-9. What effect does --with-provider-secrets have?
-10. Can a live execution omit --with-provider-secrets and continue with fixtures, local values, or incomplete credentials?
-11. Can a CLI option, environment variable, .env file, or YAML override select a simulator after installation?
-12. Can a real-provider connection error trigger an automatic fallback to fixtures/replay/loopback?
-13. Can Symcor be real while Tungsten remains simulated, or vice versa?
-14. Does the program clearly report which provider mode and endpoint hostname it selected, without logging secrets?
-15. Does output metadata distinguish live-provider results from fixture/simulator results?
-
-Trace the actual runtime chain
-
-Trace executable code, not only documentation:
-
-installed active_environment
-→ selected deployment profile
-→ selected environment YAML
-→ provider_mode resolution
-→ endpoint resolution
-→ runtime-secret injection
-→ provider factory
-→ concrete Symcor client
-→ concrete Tungsten client
-→ batch execution
-
-For every step report:
-
-* exact file and line;
-* function/class/shell section;
-* input;
-* default;
-* override precedence;
-* validation;
-* resulting provider implementation;
-* failure and fallback behavior.
-
-Installer behavior
-
-Inspect dry-run and non-dry-run installation paths separately.
-
-Prove whether each path performs any of these actions:
-
-* provider-client construction;
-* Symcor/Tungsten network request;
-* fixture execution;
-* secret retrieval;
-* certificate validation;
-* wrapper smoke test;
-* configuration-only validation.
-
-Expected safe behavior:
-
-* installer dry-run: no mutation, no secret retrieval, no provider request;
-* installer non-dry-run: installation and local validation only, with no business/provider request;
-* operational batch run: provider calls only when explicitly and validly configured for live mode.
-
-Report deviations, but do not change them.
-
-Configuration inspection
-
-Inspect the current values and effective precedence for:
-
-* provider_mode;
-* Symcor URL/hostname;
-* Tungsten base URL/hostname;
-* local/loopback URLs;
-* fixture/replay directories;
-* CLI endpoint options;
-* process-environment endpoint values;
-* .env or env-file fallback;
-* RUNTIME_CONFIG;
-* active_environment.
-
-A prior screenshot showed provider_mode: fixtures in dev.yaml. Determine whether that is still true in the exact current snapshot and whether the operational wrapper overrides it.
-
-Do not expose query strings, tokens, keys, passwords, certificate bodies, or private paths. Endpoint hostnames and configuration-key names are sufficient.
-
-PAT and Production tungsten_base_url values may remain UNCONFIRMED. Do not guess them. Treat them as external live-readiness gaps.
-
-Provider implementation inspection
-
-Identify the concrete implementations selected for each mode.
-
-For Symcor, determine whether runtime can select:
-
-* real SOAP/TLS client;
-* fixture reader;
-* replay client;
-* local simulator;
-* mock/test client.
-
-For Tungsten, determine whether runtime can select:
-
-* real HTTP/TLS client;
-* fixture OCR result reader;
-* replay client;
-* loopback/local service;
-* mock/test client.
-
-Search for silent fallback logic such as:
-
-try live provider
-on failure use fixtures/replay/mock
-
-Any such fallback in installed DEV/PAT/Production execution must be reported explicitly.
-
-A provider failure should not silently produce simulated business results.
-
-Entry-point matrix
-
-Inspect all relevant entry points:
-
-* supported operational wrapper;
-* runtime-secret wrapper;
-* clue-batch;
-* python -m clue.batch;
-* clue-tungsten;
-* documented AutoSys command;
-* any runbook command.
-
-For each entry point report:
-
-| Entry point | Environment required? | Default provider mode | Secret wrapper used? | Symcor implementation | Tungsten implementation | Can contact real provider? | Can silently use fixtures? |
-
-Environment matrix
-
-Produce this matrix from executable evidence:
-
-Environment	Configured provider mode	Symcor endpoint source	Tungsten endpoint source	Normal operational result	Fail-closed gaps
-DEV					
-PAT					
-Production					
-
-Do not describe an endpoint as real only because its hostname looks corporate. State whether it is owner/platform-confirmed, repository-configured, or unverified.
-
-Tests
-
-Inspect tests covering:
-
-* dry-run never contacts providers;
-* non-dry-run installation never performs a business/provider call;
-* installed operational execution selects live mode;
-* fixtures require explicit offline/local selection;
-* missing provider mode fails closed in installed execution;
-* missing live endpoint fails closed;
-* missing live credential fails closed;
-* Symcor/Tungsten modes cannot diverge unintentionally;
-* provider failure does not fall back to fixtures;
-* direct Python invocation cannot bypass the installed provider-mode contract;
-* logs identify live versus fixture mode safely;
-* fake cheque data cannot be returned during an intended live execution.
-
-Do not claim tests passed solely because test files exist. Separate test definitions from executed evidence.
-
-Do not run any test capable of contacting a real provider. Narrow synthetic unit tests may run only if they use temporary directories, explicit mocks, and cannot interfere with the implementation session.
-
-Required verdicts
-
-Issue exactly one installation verdict:
-
-* INSTALLATION_CORRECTLY_AVOIDS_PROVIDER_CALLS
-* INSTALLATION_CAN_CONTACT_PROVIDERS
-* INSTALLATION_BEHAVIOR_UNVERIFIED
-* PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE
-
-Issue exactly one post-install runtime verdict:
-
-* POST_INSTALL_OPERATIONAL_LIVE_MODE_VERIFIED
-* INSTALLED_RUNTIME_DEFAULTS_TO_FIXTURES
-* EXPLICIT_LIVE_SELECTION_REQUIRED
-* MIXED_REAL_AND_SIMULATED_PROVIDER_RISK
-* AMBIGUOUS_OR_BYPASSABLE_PROVIDER_MODE
-* INSUFFICIENT_EVIDENCE
-* PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE
-
-Issue separate provider conclusions:
-
-SYMCOR: REAL / FIXTURE / EXPLICIT_SELECTION_REQUIRED / UNVERIFIED
-TUNGSTEN: REAL / FIXTURE / EXPLICIT_SELECTION_REQUIRED / UNVERIFIED
-
-Final report
-
-Finish with:
-
-1. whether non-dry-run installation itself contacts providers;
-2. the exact provider mode installed for DEV, PAT, and Production;
-3. the exact normal post-install operational command;
-4. whether that command selects real Symcor and Tungsten clients;
-5. whether --with-provider-secrets is mandatory for live mode;
-6. whether fixture/simulator fallback is possible;
-7. whether fake cheque results could appear during an intended live run;
-8. missing tests or external endpoint values;
-9. files that changed concurrently and require recheck;
-10. confirmation that no code, Git state, installation, secret, endpoint, provider, or artifact was changed or accessed.
-
-Stop after the investigation. Do not implement any correction.
+Continue from the completed six-phase CLUE working tree. This is the artifact-build, DEV-installation, and installed-runtime acceptance phase. Do not restart the implementation or restore older files.
+
+Act as the release manager for an agentic verification loop:
+
+* Maintain exactly one writer.
+* Development fixes may be made only by the designated writer.
+* Build and test reviewers must remain read-only.
+* If the working tree changes outside this session, stop, invalidate the affected evidence, and report the drift.
+
+Scope and authorization
+
+Authorized:
+
+* Build a new uniquely named test-only deployment artifact.
+* Transfer it to the configured DEV Linux host using an already-authenticated, non-interactive connection.
+* Perform a real, non-dry-run DEV installation under /app/clue.
+* Run installation, runtime-selection, rollback, locking, Linux-specific, and offline provider-boundary tests.
+* Repair implementation defects in deployment/configuration/runtime-environment integration, rebuild, reinstall and retest until the defined acceptance gates pass.
+
+Not authorized:
+
+* Nexus publication or promotion.
+* Commit, push, tag, PR or deployment to PAT/Production.
+* Changes to CI/CD, pom.xml, assembly.xml, Salt infrastructure or system sudoers.
+* Root login or interactive root shell.
+* Password collection, storage or prompting.
+* Real Vault/Pillar secret retrieval.
+* Real Symcor or Tungsten business/API calls.
+* Editing the installed tree as a substitute for fixing source.
+* Guessing hostnames, NPIDs, endpoints or externally owned values.
+
+Preserve all existing work. Never run reset, checkout, clean, stash, or broad restore operations.
+
+The authoritative local evidence entering this phase is:
+
+* Full regression: 1350 passed, 68 skipped, 0 failed.
+* Failure-safety suite: 24 passed.
+* Application runtime environment contract verified.
+* Non-root installation and active-environment contract verified locally.
+* PAT and Production tungsten_base_url remain external and unconfirmed.
+* Previous artifact was test-only, unpublished and named dirty.
+* The target of this phase is DEV only.
+
+Phase 0 — freeze and identify the exact source
+
+1. Record branch, HEAD, staged/unstaged/untracked state and hashes of every build input.
+2. Confirm no concurrent writer for a suitable observation window.
+3. Preserve pre-existing pom.xml and .agents changes without modifying them.
+4. Set the target from the authoritative DEV profile:
+    * environment: dev
+    * application root: /app/clue
+    * runtime owner: the NPID declared by the DEV deployment profile
+    * expected host: the value declared by the DEV profile
+5. Treat any CLI --npid value only as an assertion against the profile. It must never select or replace the runtime owner.
+6. If the tree changes during a build or test, invalidate that result and restart from a fresh snapshot.
+
+Phase 1 — build a new test artifact
+
+Use the repository’s configured assembly/build mechanism without editing pom.xml or assembly.xml.
+
+Requirements:
+
+* Never overwrite or silently reuse an older artifact.
+* Generate a unique test-only filename containing the version, HEAD prefix and dirty/clean state.
+* Record its absolute path, byte size, member count and complete SHA-256.
+* Create a manifest linking the artifact to the exact source snapshot.
+* Validate safe archive paths, absence of duplicate members, required installer/wrapper/configuration files, executable modes and byte parity with the source Deliverables.
+* Verify that DEV, PAT and Production profiles are packaged, while no environment is activated merely by copying them.
+* Run shell syntax, package-layout and archive-extraction validation.
+* Run the secret scanner correctly, capturing the scanner process exit code rather than the pipeline exit code.
+* Do not print suspected token values. Report only paths, classifications and redacted hashes.
+* The known 32-character values under docs/handoff must remain an explicit unresolved scanner classification unless repository evidence proves they are non-secret identifiers.
+* Do not publish this artifact.
+
+If raw credentials or private key material are found, stop immediately. An unclassified documentation token may remain a test-artifact warning but must prevent any production-ready or publishable verdict.
+
+Phase 2 — DEV host preflight
+
+Use only an already-configured passwordless connection. Do not request credentials.
+
+Before changing /app/clue, prove:
+
+* The target is Linux and its hostname matches the DEV profile.
+* The declared NPID and required group exist.
+* The initiating user is non-root.
+* Required delegation succeeds through exact sudo -n authorization without a TTY or password.
+* No broad sudo rule is accepted as proof of the intended contract.
+* /app/clue is already safely provisioned for the approved installation model.
+* Existing installation state, active marker and rollback candidate are identified.
+* Disk, temporary staging location and required commands are available.
+* No process currently holds the installation lock.
+
+If /app/clue requires new root provisioning or the exact passwordless prerequisite is absent, stop before mutation and return DEV_INSTALL_PREREQUISITE_MISSING. Do not repair sudoers or become root.
+
+Phase 3 — staged installation
+
+1. Copy the exact validated artifact to a unique NPID-writable staging directory.
+2. Verify the remote SHA-256 equals the local SHA-256.
+3. Inspect the packaged runbook and installer --help; derive the command from shipped documentation rather than memory.
+4. Run the installer’s preflight/dry-run first.
+5. If preflight is green, perform the real non-dry-run DEV installation using:
+    * environment dev
+    * the artifact’s exact release identifier
+    * the profile-declared NPID
+    * /app/clue
+6. Installation must not contact Symcor, Tungsten, Vault or Salt Pillar. A non-dry-run installation is not the same thing as a live provider execution.
+7. Do not manually delete or replace the current installation. Use the installer’s atomic staging, lock and rollback mechanisms.
+
+Phase 4 — installed-tree acceptance
+
+From the installed bytes, verify:
+
+* /app/clue/config/active_environment exists and contains exactly dev.
+* Marker, DEV profile, CLUE_ENV, absolute RUNTIME_CONFIG, and YAML environment all agree.
+* RUNTIME_CONFIG resolves inside /app/clue and cannot escape by traversal or symlink.
+* PAT and Production profiles being present cannot influence a DEV execution.
+* CLI environment/config/NPID values are assertions and cannot override the installed identity.
+* /app/clue ownership and operational files follow the NPID contract.
+* The NPID can run the supported operational command without a password and without becoming root.
+* Python imports, packaged entry points, shell scripts and --help execute successfully.
+* The operational wrapper reaches the installed Python child and preserves child exit codes.
+* --dry-run performs no secret retrieval and no provider call.
+* Missing, malformed or contradictory markers fail closed before secrets or providers.
+* A concurrent second installation is refused by the lock.
+* Same-environment rollback restores both application bytes and the correct marker.
+* Cross-environment rollback is refused.
+* Interrupted/failed extraction is exercised against an isolated sandbox app root, never by corrupting the accepted /app/clue installation.
+
+Phase 5 — live-path safety without live calls
+
+Prove the provider-selection boundary using stubs/fakes only:
+
+* An installed non-dry-run operational execution must resolve the DEV live provider configuration; it must not silently select fixtures, replay or loopback.
+* Explicit local/offline test modes may use fixtures only when deliberately requested.
+* A provider-contacting installed execution must require the runtime-secret path. Omitting --with-provider-secrets, disabling runtime-secret mode, or supplying .env/arbitrary process credentials must fail closed before client construction.
+* Apply the same rule to every operational entry point, including clue-batch, python -m clue.batch, and clue-tungsten.
+* Validate the installed environment before any secret lookup.
+* Missing OpenSSL must fail closed for live secret/certificate use.
+* Do not retrieve real secrets and do not contact provider endpoints.
+* Do not log secret values, shortened key fingerprints or temporary certificate/private-key paths.
+
+If the current implementation allows an installed live execution to bypass Salt/Pillar or default to fixtures, classify it as an implementation defect, repair source, add behavioral tests, rerun the complete regression suite, rebuild a new uniquely named artifact and repeat installation from the artifact. Never patch /app/clue directly.
+
+Phase 6 — Linux closure and repeat-until-green loop
+
+Run the previously skipped Linux-relevant cases on the DEV Linux host or an equivalent Linux sandbox:
+
+* symlink rejection and escape prevention;
+* user/group-name resolution;
+* ownership and permission behavior;
+* no-TTY passwordless execution;
+* locking and signal cleanup;
+* extraction failure and rollback integrity.
+
+For every failure:
+
+1. Classify it as implementation defect, stale expectation, environment prerequisite or external input.
+2. Do not weaken, delete, rename or skip a test merely to obtain green results.
+3. Fix implementation defects in source.
+4. Rerun the smallest proving test.
+5. Rerun the complete regression suite.
+6. Build a new artifact with a new identity.
+7. Reinstall and rerun all installed acceptance checks.
+
+Continue until there are zero implementation failures or an owner-controlled external prerequisite blocks safe progress.
+
+Required final report
+
+Report:
+
+* frozen branch, HEAD and source-state identity;
+* artifact filename, absolute path, size, member count and SHA-256;
+* local and remote checksum equality;
+* DEV hostname, environment, NPID and installation root without exposing secrets;
+* exact build/install/test commands with sensitive values redacted;
+* exit codes and exact pass/fail/skip/deselect counts;
+* proof that the prior Windows-only skipped behaviors executed on Linux;
+* marker/profile/YAML agreement;
+* ownership and passwordless non-root evidence;
+* lock, failure-injection and rollback results;
+* live-vs-fixture selection result;
+* runtime-secret mandatory-gate result;
+* scanner findings and their classification;
+* any source/artifact rebuild iterations;
+* confirmation that no password, real secret, provider call, publication, commit, push, PR, PAT or Production mutation occurred.
+
+Use only evidence-backed verdicts:
+
+* DEV_TEST_ARTIFACT_BUILT
+* DEV_ARTIFACT_TRANSFER_VERIFIED
+* DEV_NON_ROOT_INSTALL_VERIFIED
+* DEV_ACTIVE_ENVIRONMENT_VERIFIED
+* DEV_LINUX_ACCEPTANCE_VERIFIED
+* LIVE_PROVIDER_SELECTION_CONTRACT_VERIFIED
+* RUNTIME_SECRET_GATE_VERIFIED
+* TEST_ARTIFACT_BUILT_NOT_PUBLISHED
+
+Withhold any verdict whose evidence is incomplete. Always retain:
+
+* EXTERNAL_TUNGSTEN_ENDPOINT_VALUES_REQUIRED while PAT/Production endpoints remain unconfirmed.
+* NOT_PRODUCTION_READY until external endpoint/secret ownership, actual production execution evidence and release governance are complete.
