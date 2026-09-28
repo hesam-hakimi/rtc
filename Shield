@@ -1,107 +1,19 @@
-Simplify the current DEV installation experience. The existing operational document exposes too many installer internals and is not suitable for the immediate development-acceptance workflow.
+Proceed with the real merge safely.
 
-Do not continue release gates, full regression, release re-audit, PAT/Production readiness or production certification. The owner has not provided development acceptance sign-off.
-
-Required operator experience
-
-The DEV operator must run one command only:
-
-bash clue_dev_bootstrap.sh
-
-The bootstrap must then provide this short interactive flow:
-
-CLUE DEV Test Installation
-Artifact source:
-1. Existing file on this host
-2. Nexus
-Select [1-2]:
-
-For option 1, request the exact absolute archive path.
-
-For option 2, request the exact Nexus artifact URL or use the already configured DEV repository contract when the release uniquely identifies it. Do not guess among multiple artifacts.
-
-Then display one confirmation:
-
-Environment: dev
-NPID: tclue999devs
-Install root: /app/clue
-Artifact: <resolved path or URL>
-Continue? [y/N]
-
-After confirmation, the bootstrap must:
-
-1. Acquire or locate the archive.
-2. Confirm it is a readable, non-empty gzip/tar archive.
-3. Calculate and display its SHA-256. If an expected builder checksum or Nexus checksum is available, compare it; otherwise label the test artifact checksum as locally calculated without blocking this development test.
-4. Keep the inbound archive outside /app/clue.
-5. Invoke one ordinary interactive TTY command as tclue999devs.
-6. Allow the owner to type the sudo password directly in the terminal.
-7. Never read, pipe, capture, log or store the password.
-8. Have the NPID create and own a private mktemp staging directory.
-9. Extract the required packaged installer and DEV configuration into that staging directory.
-10. Invoke the existing clue_install_release.sh; do not create a second installation engine.
-11. Pass --environment dev, the exact archive and the selected test release.
-12. Detect the existing markerless /app/clue. For this known first DEV upgrade, request one clear confirmation and then pass the existing --adopt-legacy dev option.
-13. Stop immediately on the first real error and print:
-    * failed step;
-    * exact non-secret error;
-    * whether /app/clue was modified;
-    * whether automatic restoration occurred.
-14. On success, print only:
-    * installed release;
-    * artifact SHA-256;
-    * active environment;
-    * /app/clue owner/group;
-    * the next command for the team to begin DEV functional testing.
-
-Simplification boundaries
-
-The operator must not manually:
-
-* export ENVIRONMENT, RELEASE, TMP_ROOT, ARCHIVE, STAGE or checksum variables;
-* create the staging directory;
-* extract individual archive members;
-* run grep;
-* run preflight separately;
-* run a separate dry-run;
-* determine direct versus delegated mode;
-* invoke multiple installation commands;
-* run release gates or rollback certification.
-
-Those checks may remain inside the bootstrap or existing installer, but they must not appear as separate operator steps.
-
-Do not remove the existing detailed technical reference. Restructure CLUE_OPERATIONAL_DEPLOYMENT.md so its beginning contains:
-
-1. DEV Test Installation — Quick Start
-2. the single bootstrap command;
-3. the two source choices;
-4. the interactive-password notice;
-5. success and failure outputs.
-
-Move the detailed acquisition, staging, preflight, sudoers, secret, dependency, rollback, PAT, Production, exit-code and internal-stage explanations under a clearly labelled Technical Reference — Not Required for DEV Quick Start.
-
-Development acceptance only
-
-Build exactly one uniquely named test artifact containing the bootstrap and current installer changes. Do not publish it as a release.
-
-Perform only minimum checks needed for this scenario:
-
-* shell syntax;
-* archive readability;
-* bootstrap can select both acquisition choices;
-* NPID staging ownership;
-* correct arguments are passed to the existing installer.
-
-Do not run the full regression suite.
-
-Return:
-
-* changed files;
-* the single operator command;
-* test-artifact path, size and SHA-256;
-* the exact interactive command that will request the owner’s password;
-* status:
-
-DEV_TEST_ARTIFACT_READY_FOR_OWNER_INSTALL
-
-Do not claim DEV acceptance or release readiness. Both require the owner’s later explicit sign-off.
+Requirements:
+1. Do not push, publish, release, or build a new artifact.
+2. Record the current branch, HEAD, origin/main commit, and full git status.
+3. Preserve every tracked and untracked local change in a clearly named stash using `git stash push -u`.
+4. Verify that the working tree is clean and the stash exists.
+5. Merge `origin/main` into the current branch. Do not rebase.
+6. Resolve the `.gitignore` conflict by preserving the union of both branches:
+   - keep the current branch’s `reports/` and pytest text-output exclusions;
+   - keep origin/main’s `.local/`, `*.code-workspace`, `*.tar.gz`, and tool/reference exclusions;
+   - remove only exact duplicates;
+   - do not choose Current or Incoming wholesale.
+7. Show the resolved `.gitignore` diff before completing the merge.
+8. Complete the merge locally, but do not push.
+9. Reapply the saved stash.
+10. If reapplying the stash creates any conflict, stop without discarding anything and report the exact files and conflict sections.
+11. If it applies cleanly, run only the existing lightweight shell/bootstrap checks—no full regression.
+12. Report final git status, merge commit, restored local files, checks performed, and confirm that nothing was pushed or published.
