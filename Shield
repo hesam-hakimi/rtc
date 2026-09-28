@@ -1,94 +1,13 @@
-I confirm that the other agent sessions have now been stopped. You are the only active writer for this working tree.
+Owner correction: the same confirmation applies to Production.
 
-Proceed with the reconciliation, subject to the following owner ruling.
+The existing Production deployment values in Deliverables/config/deployment_env_conf/prod.conf are correct and owner-confirmed. Preserve their exact existing bytes, including:
 
-PAT/Production identity ruling
+* the existing Production NPID;
+* the existing Production EXPECT_HOST;
+* the existing Production APP_ROOT.
 
-Use the conservative, evidence-based interpretation:
+Do not replace any of them with UNCONFIRMED, and do not copy PAT or DEV values into Production.
 
-* DEV identity is confirmed.
-* PAT identity, PAT host binding and PAT installation root are not yet independently confirmed.
-* Production identity, host binding and installation root are not confirmed.
-* A comment inside pat.conf claiming that a value was owner-verified is not, by itself, verification evidence.
-* The conflicting comment in pat.yaml demonstrates that the repository is internally inconsistent.
-* Do not resolve this contradiction by trusting whichever file is more convenient.
+If these lines were already changed, restore only those Production values from the recovery snapshot. Align contradictory comments or documentation with this owner confirmation, while leaving the confirmed configuration values unchanged.
 
-Treat the following current PAT values only as unverified candidates:
-
-NPID=ACLUE885APPS
-EXPECT_HOST=rclueapazhgs0.dev.vmc2.td.com
-
-Preserve those candidate values in the recovery evidence, but do not claim they are approved PAT values and do not allow them to authorize a real PAT installation.
-
-The .dev.vmc2.td.com hostname in a PAT profile requires explicit environment-owner confirmation; do not infer validity from its presence in the repository.
-
-Apply the same conservative rule to Production.
-
-Required repository alignment
-
-Remove or correct unsupported comments that claim PAT or Production values were verified.
-
-The shipped higher-environment profiles must fail closed when an owner-controlled value is unresolved. Use the repository’s established unresolved-value mechanism rather than inventing real-looking values.
-
-It is acceptable to use isolated test fixtures containing synthetic PAT and Production identities to prove that the common installer works for all three environment shapes. Clearly separate those fixtures from deployable configuration.
-
-For runtime endpoints:
-
-* preserve supported symcor_url behavior when repository evidence establishes it;
-* retain tungsten_base_url: UNCONFIRMED where no approved value exists;
-* do not substitute DEV endpoints;
-* do not silently fall back to local or another environment.
-
-Continue the planned reconciliation
-
-Proceed with:
-
-1. a fresh recovery snapshot;
-2. WS1/WS2/pre-existing hunk classification;
-3. surgical reconciliation of envsettings.py;
-4. repair of the broken batch.py import contract;
-5. preservation of the non-NPID installer-initiator work;
-6. preservation of the configured-NPID runtime-owner contract;
-7. the complete identity and environment test matrices;
-8. the full verification pipeline from the beginning.
-
-Historical passing test counts remain invalid for the reconciled bytes.
-
-Privilege validation correction
-
-Do not treat a generic probe such as:
-
-sudo -n -u <NPID> true
-
-as sufficient proof of deployment authorization.
-
-Validate the exact noninteractive operations the installer will execute. Do not broaden sudoers merely to make the probe pass.
-
-Required behavior remains:
-
-* an approved installer initiator need not be logged in as the target NPID;
-* the configured environment NPID owns the installed application and runs it;
-* no personal password is requested or stored;
-* missing exact authorization fails before mutation;
-* an arbitrary CLI-provided owner is rejected;
-* root remains an explicit bootstrap/recovery exception.
-
-Expected verdict behavior
-
-If reconciliation and all internal tests pass while PAT or Production owner values remain unconfirmed, return:
-
-EXTERNAL_ENVIRONMENT_VALUES_REQUIRED
-
-This is not an implementation failure. Report separately that the common installer has passed simulated DEV/PAT/Production configuration tests.
-
-Do not issue:
-
-RECONCILED_READY_FOR_FULL_VERIFICATION
-
-for real higher-environment deployment until the actual PAT and Production identities, hosts and roots have authoritative confirmation.
-
-Continue now without another question unless:
-
-* a new concurrent writer appears;
-* reconciliation would destroy an unrecoverable change;
-* an additional owner-controlled value is required to proceed safely.
+PAT and Production identities, hosts and application roots may now be treated as confirmed for configuration and validation testing. Continue reconciliation and full verification.
