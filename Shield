@@ -1,201 +1,22 @@
-Continue from the completed six-phase CLUE working tree. This is the artifact-build, DEV-installation, and installed-runtime acceptance phase. Do not restart the implementation or restore older files.
+Owner clarification: for this DEV installation test only, an interactive sudo password prompt is authorized.
 
-Act as the release manager for an agentic verification loop:
+Use the existing interactive VS Code terminal with a real TTY. Run the normal delegated command as tclue999devs without -n, pause when the terminal displays the password prompt, and allow me to type the password directly into the terminal.
 
-* Maintain exactly one writer.
-* Development fixes may be made only by the designated writer.
-* Build and test reviewers must remain read-only.
-* If the working tree changes outside this session, stop, invalidate the affected evidence, and report the drift.
+Security requirements:
 
-Scope and authorization
+* Never ask me to send or paste the password into chat.
+* Do not read, capture, print, log, repeat or store the password.
+* Do not use sudo -S, stdin piping, echo, environment variables, files, SUDO_ASKPASS, expect or sshpass.
+* Do not open a root shell, change sudoers or broaden privileges.
+* If sudo policy still denies the exact delegated command after authentication, stop and report the denial.
 
-Authorized:
+After successful interactive authentication:
 
-* Build a new uniquely named test-only deployment artifact.
-* Transfer it to the configured DEV Linux host using an already-authenticated, non-interactive connection.
-* Perform a real, non-dry-run DEV installation under /app/clue.
-* Run installation, runtime-selection, rollback, locking, Linux-specific, and offline provider-boundary tests.
-* Repair implementation defects in deployment/configuration/runtime-environment integration, rebuild, reinstall and retest until the defined acceptance gates pass.
+1. Reconfirm the checksum of the exact artifact already staged on the DEV host.
+2. Run the documented installer as tclue999devs.
+3. Install to /app/clue for environment dev.
+4. Complete the previously blocked installation, active-environment, installed-runtime and provider-gate tests.
+5. Do not retrieve real secrets or call Symcor or Tungsten.
+6. Do not rebuild or transfer another artifact unless an implementation defect requires a source fix.
 
-Not authorized:
-
-* Nexus publication or promotion.
-* Commit, push, tag, PR or deployment to PAT/Production.
-* Changes to CI/CD, pom.xml, assembly.xml, Salt infrastructure or system sudoers.
-* Root login or interactive root shell.
-* Password collection, storage or prompting.
-* Real Vault/Pillar secret retrieval.
-* Real Symcor or Tungsten business/API calls.
-* Editing the installed tree as a substitute for fixing source.
-* Guessing hostnames, NPIDs, endpoints or externally owned values.
-
-Preserve all existing work. Never run reset, checkout, clean, stash, or broad restore operations.
-
-The authoritative local evidence entering this phase is:
-
-* Full regression: 1350 passed, 68 skipped, 0 failed.
-* Failure-safety suite: 24 passed.
-* Application runtime environment contract verified.
-* Non-root installation and active-environment contract verified locally.
-* PAT and Production tungsten_base_url remain external and unconfirmed.
-* Previous artifact was test-only, unpublished and named dirty.
-* The target of this phase is DEV only.
-
-Phase 0 — freeze and identify the exact source
-
-1. Record branch, HEAD, staged/unstaged/untracked state and hashes of every build input.
-2. Confirm no concurrent writer for a suitable observation window.
-3. Preserve pre-existing pom.xml and .agents changes without modifying them.
-4. Set the target from the authoritative DEV profile:
-    * environment: dev
-    * application root: /app/clue
-    * runtime owner: the NPID declared by the DEV deployment profile
-    * expected host: the value declared by the DEV profile
-5. Treat any CLI --npid value only as an assertion against the profile. It must never select or replace the runtime owner.
-6. If the tree changes during a build or test, invalidate that result and restart from a fresh snapshot.
-
-Phase 1 — build a new test artifact
-
-Use the repository’s configured assembly/build mechanism without editing pom.xml or assembly.xml.
-
-Requirements:
-
-* Never overwrite or silently reuse an older artifact.
-* Generate a unique test-only filename containing the version, HEAD prefix and dirty/clean state.
-* Record its absolute path, byte size, member count and complete SHA-256.
-* Create a manifest linking the artifact to the exact source snapshot.
-* Validate safe archive paths, absence of duplicate members, required installer/wrapper/configuration files, executable modes and byte parity with the source Deliverables.
-* Verify that DEV, PAT and Production profiles are packaged, while no environment is activated merely by copying them.
-* Run shell syntax, package-layout and archive-extraction validation.
-* Run the secret scanner correctly, capturing the scanner process exit code rather than the pipeline exit code.
-* Do not print suspected token values. Report only paths, classifications and redacted hashes.
-* The known 32-character values under docs/handoff must remain an explicit unresolved scanner classification unless repository evidence proves they are non-secret identifiers.
-* Do not publish this artifact.
-
-If raw credentials or private key material are found, stop immediately. An unclassified documentation token may remain a test-artifact warning but must prevent any production-ready or publishable verdict.
-
-Phase 2 — DEV host preflight
-
-Use only an already-configured passwordless connection. Do not request credentials.
-
-Before changing /app/clue, prove:
-
-* The target is Linux and its hostname matches the DEV profile.
-* The declared NPID and required group exist.
-* The initiating user is non-root.
-* Required delegation succeeds through exact sudo -n authorization without a TTY or password.
-* No broad sudo rule is accepted as proof of the intended contract.
-* /app/clue is already safely provisioned for the approved installation model.
-* Existing installation state, active marker and rollback candidate are identified.
-* Disk, temporary staging location and required commands are available.
-* No process currently holds the installation lock.
-
-If /app/clue requires new root provisioning or the exact passwordless prerequisite is absent, stop before mutation and return DEV_INSTALL_PREREQUISITE_MISSING. Do not repair sudoers or become root.
-
-Phase 3 — staged installation
-
-1. Copy the exact validated artifact to a unique NPID-writable staging directory.
-2. Verify the remote SHA-256 equals the local SHA-256.
-3. Inspect the packaged runbook and installer --help; derive the command from shipped documentation rather than memory.
-4. Run the installer’s preflight/dry-run first.
-5. If preflight is green, perform the real non-dry-run DEV installation using:
-    * environment dev
-    * the artifact’s exact release identifier
-    * the profile-declared NPID
-    * /app/clue
-6. Installation must not contact Symcor, Tungsten, Vault or Salt Pillar. A non-dry-run installation is not the same thing as a live provider execution.
-7. Do not manually delete or replace the current installation. Use the installer’s atomic staging, lock and rollback mechanisms.
-
-Phase 4 — installed-tree acceptance
-
-From the installed bytes, verify:
-
-* /app/clue/config/active_environment exists and contains exactly dev.
-* Marker, DEV profile, CLUE_ENV, absolute RUNTIME_CONFIG, and YAML environment all agree.
-* RUNTIME_CONFIG resolves inside /app/clue and cannot escape by traversal or symlink.
-* PAT and Production profiles being present cannot influence a DEV execution.
-* CLI environment/config/NPID values are assertions and cannot override the installed identity.
-* /app/clue ownership and operational files follow the NPID contract.
-* The NPID can run the supported operational command without a password and without becoming root.
-* Python imports, packaged entry points, shell scripts and --help execute successfully.
-* The operational wrapper reaches the installed Python child and preserves child exit codes.
-* --dry-run performs no secret retrieval and no provider call.
-* Missing, malformed or contradictory markers fail closed before secrets or providers.
-* A concurrent second installation is refused by the lock.
-* Same-environment rollback restores both application bytes and the correct marker.
-* Cross-environment rollback is refused.
-* Interrupted/failed extraction is exercised against an isolated sandbox app root, never by corrupting the accepted /app/clue installation.
-
-Phase 5 — live-path safety without live calls
-
-Prove the provider-selection boundary using stubs/fakes only:
-
-* An installed non-dry-run operational execution must resolve the DEV live provider configuration; it must not silently select fixtures, replay or loopback.
-* Explicit local/offline test modes may use fixtures only when deliberately requested.
-* A provider-contacting installed execution must require the runtime-secret path. Omitting --with-provider-secrets, disabling runtime-secret mode, or supplying .env/arbitrary process credentials must fail closed before client construction.
-* Apply the same rule to every operational entry point, including clue-batch, python -m clue.batch, and clue-tungsten.
-* Validate the installed environment before any secret lookup.
-* Missing OpenSSL must fail closed for live secret/certificate use.
-* Do not retrieve real secrets and do not contact provider endpoints.
-* Do not log secret values, shortened key fingerprints or temporary certificate/private-key paths.
-
-If the current implementation allows an installed live execution to bypass Salt/Pillar or default to fixtures, classify it as an implementation defect, repair source, add behavioral tests, rerun the complete regression suite, rebuild a new uniquely named artifact and repeat installation from the artifact. Never patch /app/clue directly.
-
-Phase 6 — Linux closure and repeat-until-green loop
-
-Run the previously skipped Linux-relevant cases on the DEV Linux host or an equivalent Linux sandbox:
-
-* symlink rejection and escape prevention;
-* user/group-name resolution;
-* ownership and permission behavior;
-* no-TTY passwordless execution;
-* locking and signal cleanup;
-* extraction failure and rollback integrity.
-
-For every failure:
-
-1. Classify it as implementation defect, stale expectation, environment prerequisite or external input.
-2. Do not weaken, delete, rename or skip a test merely to obtain green results.
-3. Fix implementation defects in source.
-4. Rerun the smallest proving test.
-5. Rerun the complete regression suite.
-6. Build a new artifact with a new identity.
-7. Reinstall and rerun all installed acceptance checks.
-
-Continue until there are zero implementation failures or an owner-controlled external prerequisite blocks safe progress.
-
-Required final report
-
-Report:
-
-* frozen branch, HEAD and source-state identity;
-* artifact filename, absolute path, size, member count and SHA-256;
-* local and remote checksum equality;
-* DEV hostname, environment, NPID and installation root without exposing secrets;
-* exact build/install/test commands with sensitive values redacted;
-* exit codes and exact pass/fail/skip/deselect counts;
-* proof that the prior Windows-only skipped behaviors executed on Linux;
-* marker/profile/YAML agreement;
-* ownership and passwordless non-root evidence;
-* lock, failure-injection and rollback results;
-* live-vs-fixture selection result;
-* runtime-secret mandatory-gate result;
-* scanner findings and their classification;
-* any source/artifact rebuild iterations;
-* confirmation that no password, real secret, provider call, publication, commit, push, PR, PAT or Production mutation occurred.
-
-Use only evidence-backed verdicts:
-
-* DEV_TEST_ARTIFACT_BUILT
-* DEV_ARTIFACT_TRANSFER_VERIFIED
-* DEV_NON_ROOT_INSTALL_VERIFIED
-* DEV_ACTIVE_ENVIRONMENT_VERIFIED
-* DEV_LINUX_ACCEPTANCE_VERIFIED
-* LIVE_PROVIDER_SELECTION_CONTRACT_VERIFIED
-* RUNTIME_SECRET_GATE_VERIFIED
-* TEST_ARTIFACT_BUILT_NOT_PUBLISHED
-
-Withhold any verdict whose evidence is incomplete. Always retain:
-
-* EXTERNAL_TUNGSTEN_ENDPOINT_VALUES_REQUIRED while PAT/Production endpoints remain unconfirmed.
-* NOT_PRODUCTION_READY until external endpoint/secret ownership, actual production execution evidence and release governance are complete.
+This is a manual DEV-test exception only. Do not claim passwordless, unattended or AutoSys readiness. Retain the passwordless prerequisite as an operational blocker until either an exact NOPASSWD delegation exists or AutoSys runs directly as tclue999devs.
