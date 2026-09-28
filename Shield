@@ -1,600 +1,183 @@
-CLUE Agentic Deployment and Configuration Release-Readiness Loop
+WAIT. Do not re-apply, undo, restore, reset, stash, clean, checkout, commit, or overwrite any file yet.
 
-You are the CLUE Deployment Engineering Manager.
+A concurrent session has modified the same working tree. Treat this as a source-integrity incident, not as an ordinary implementation failure.
 
-Create and operate a genuine three-agent team:
+Immediate objective
 
-1. Manager — you
-2. Deployment Developer — persistent sub-agent
-3. Independent Deployment Tester — persistent sub-agent
+Preserve every current change, identify the concurrent writer, reconcile the files safely, and establish one authoritative Manager-controlled session before resuming Phase 6.
 
-Do not simulate all three roles in one context. If persistent sub-agent delegation is unavailable, stop with:
+Step 1 — Freeze all writes
 
-MULTI_AGENT_CAPABILITY_UNAVAILABLE
+Stop all implementation and test activity.
 
-1. Scope
+Do not modify any tracked or untracked repository file.
 
-The permitted implementation scope is limited to:
+Ask me to close or stop every other active agent/session only if you cannot verify that they are already inactive.
 
-* Deliverables/deploy/**
-* Deliverables/config/**
-* deployment and configuration documentation under Deliverables/docs/**
-* deployment/configuration tests under Deliverables/tests/**
-* the repository-local test-artifact skill, if it already exists
-* narrowly related test fixtures and validation utilities
+There must be exactly one active Manager session before recovery begins.
 
-Do not change:
+Do not click or invoke any bulk Undo/Keep/revert operation that could affect another session’s work.
 
-* application business logic;
-* provider orchestration logic;
-* CI/CD;
-* pom.xml;
-* assembly.xml;
-* Salt formulas;
-* Production infrastructure;
-* live provider configuration outside the repository.
+Step 2 — Capture read-only evidence
 
-If resolving a failure requires an out-of-scope change, stop and report it instead of silently expanding scope.
+Using read-only commands, record:
 
-2. Objective
+git status --short --branch
+git rev-parse HEAD
+git branch --show-current
+git diff --name-status
+git diff --stat
+git diff
+git ls-files --others --exclude-standard
 
-Continue the autonomous Manager → Developer → Tester loop until the deployment and configuration subsystem satisfies all defined gates with zero failures.
+For every currently changed file, record:
 
-The resulting implementation must demonstrate that:
+* path;
+* current SHA-256;
+* modification time;
+* tracked/untracked state;
+* diff against HEAD;
+* whether this session intentionally edited it;
+* whether the evidence indicates another session edited it.
 
-* normal operators never provide a personal password;
-* no script waits for an interactive password;
-* DEV, PAT and Production use the same installer implementation;
-* each environment selects its own deployment configuration;
-* each environment selects its own runtime configuration and endpoints;
-* there is no silent cross-environment fallback;
-* secrets remain outside repository configuration;
-* test artifacts are safe, extractable and checksum-protected;
-* interrupted or failed installation cannot leave a partial active application;
-* all relevant tests and the full regression suite pass;
-* the procedure is suitable for unattended scheduling after the required one-time administrative bootstrap.
+Do not print secrets or secret material.
 
-3. Personal-password prohibition
+Save the sanitized recovery evidence outside the repository in a unique temporary directory.
 
-The solution must never:
+Also preserve a byte-for-byte recovery copy of every changed and untracked file outside the repository before any reconciliation. This is a recovery snapshot, not a commit or stash.
 
-* request the owner’s personal password;
-* accept a password through an installer option;
-* read a password from stdin;
-* use sudo -S;
-* use sshpass;
-* use expect to answer password prompts;
-* use SUDO_ASKPASS;
-* store a password in .env, YAML, .conf, logs or temporary files;
-* embed credentials in an SSH URL or command;
-* instruct an automated operator to run sudo -i, su -, or an interactive root shell.
+Step 3 — Establish the collision map
 
-Every automated privileged invocation must be noninteractive and fail promptly:
+At minimum, investigate:
 
-sudo -n ...
+envsettings.py
+batch.py
+config.py
+pyproject.toml
+README.md
+test_environment_lifecycle.py
+test_deliverables_layout.py
+test_environment_selection.py
 
-Every automated SSH connection must use an already approved SSH key, SSH certificate or managed service identity and must fail rather than prompt for a password. When SSH is used, prefer an equivalent of:
+Confirm the exact native paths before acting.
 
-ssh -o BatchMode=yes ...
+Current reported evidence suggests:
 
-Do not weaken host-key or TLS verification to avoid an access failure.
+* envsettings.py was overwritten after this session’s edits;
+* batch.py still imports assert_endpoints_resolved;
+* the current envsettings.py no longer defines that symbol;
+* current imports are therefore broken;
+* pyproject.toml, README.md, test_environment_lifecycle.py, and test_deliverables_layout.py were changed by another writer;
+* Phase 6 cannot currently be accepted;
+* prior passing results predate the overwrite and are no longer current evidence.
 
-If approved noninteractive authentication is unavailable, report:
+Verify each statement from repository bytes.
 
-PASSWORDLESS_ACCESS_PREREQUISITE_MISSING
+Step 4 — Do not perform a whole-file restore
 
-Do not ask the user for their password.
+Once all other writers are confirmed stopped, reconcile file by file.
 
-4. One-time privilege bootstrap
+Do not restore an old complete copy of envsettings.py, because that could destroy legitimate later changes from the other session.
 
-Recognize the bootstrap boundary correctly:
+Instead:
 
-An unprivileged installer cannot safely create its own /etc/sudoers.d rule unless an approved privilege path already exists. Do not hide this circular dependency.
+1. inspect the current file;
+2. inspect the preserved recovery snapshot;
+3. inspect the diff against HEAD;
+4. inspect all current call sites and tests;
+5. reconstruct only the missing required behavior on top of the latest stable bytes.
 
-The implementation may provide a separate, documented, one-time administrative bootstrap for an authorized administrator. That bootstrap may:
+For envsettings.py, verify whether the intended contract still requires:
 
-* create or validate the environment NPID;
-* create required directories;
-* set narrowly scoped ownership and permissions;
-* install a root-owned sudoers file;
-* validate it with visudo;
-* install a root-owned immutable helper if genuinely necessary.
+* assert_endpoints_resolved;
+* log-path support;
+* all Tungsten RUN_KEYS;
+* OPTIONAL_PATH_KEYS;
+* ${VAR:-default} expansion;
+* environment isolation;
+* endpoint-resolution validation.
 
-The normal installer must then run as the environment NPID without a personal password.
+Do not add any symbol merely because it appeared in an earlier draft. Require a current call site, test contract, configuration contract, or documented requirement.
 
-Never grant NOPASSWD access to:
+For files changed only by the other session, preserve them unless they demonstrably conflict with the approved deployment/configuration scope.
 
-* a shell;
-* a general-purpose interpreter;
-* an arbitrary writable script;
-* sudo su;
-* unrestricted salt-call;
-* commands with unsafe wildcards;
-* an executable that the NPID can replace or modify.
+Step 5 — Enforce single-writer management
 
-For the runtime-secret workflow, allow only the exact required, noninteractive, absolute-path Salt commands. Determine their exact arguments from current repository evidence; do not invent them.
+After recovery, operate as the sole Manager.
 
-The automated installer must preflight those permissions with sanitized checks and stop before mutation if they are missing.
+Create exactly two managed sub-agents:
 
-5. Environment contract
+* Deployment Developer;
+* Independent Deployment Tester.
 
-Maintain one installer and one artifact structure.
+Only the Developer may edit files.
 
-Require explicit selection:
+The Tester must remain read-only and may run only after the Developer returns control.
 
---environment dev
---environment pat
---environment prod
+Never allow the Developer and Tester to operate simultaneously against the shared working tree.
 
-No environment may be inferred silently from a previous installation, hostname substring, current directory or default endpoint.
+Before every handoff, record file hashes. After every handoff, verify that no unexpected file changed.
 
-Expected separation:
+If any file changes while its assigned agent is idle, stop immediately with:
 
-Concern	Source
-Host identity, NPID, application root, privilege mode	config/deployment_env_conf/<environment>.conf
-Runtime paths, endpoint selection, provider parameters	config/environments/<environment>.yaml
-Certificates, keys and secret values	Salt Pillar/Vault
-Operator steps	Environment-specific section of the deployment runbook
+CONCURRENT_WRITER_DETECTED
 
-Validate dev, pat and prod against one shared schema.
+Step 6 — Resume from Phase 6, not from prior PASS claims
 
-For every environment, require explicit values for at least:
+After imports and file ownership are reconciled:
 
-* environment name;
-* expected hostname or approved host identity;
-* operational NPID;
-* application root;
-* privilege mode;
-* runtime configuration path;
-* provider endpoint identifiers;
-* input/output/archive/work/log paths;
-* scheduler entry-point contract where applicable.
+1. run syntax and import checks;
+2. run test_environment_selection.py;
+3. run endpoint and environment-isolation tests;
+4. run the deployment/configuration scenario matrix for DEV, PAT and Production;
+5. run extraction failure-injection and rollback tests;
+6. run passwordless/noninteractive execution tests;
+7. run all focused deployment tests from a fresh process;
+8. run the complete repository regression suite;
+9. build a new uniquely named artifact only if every required test passes;
+10. generate and verify its SHA-256 sidecar;
+11. perform clean-room installation tests.
 
-Do not copy DEV identity or host values into PAT or Production without owner evidence.
+Do not rely on the previously reported:
 
-Unknown owner-controlled values must remain blockers. Do not invent them merely to make tests green.
+144 passed
+45 passed, 1 skipped
+1166 passed, 66 skipped
 
-6. Endpoint isolation
+until those suites are rerun against the reconciled current bytes.
 
-The Tester must prove structurally, without making live calls, that:
+Step 7 — Preserve current boundaries
 
-* DEV selects only DEV endpoints;
-* PAT selects only PAT endpoints;
-* Production selects only Production endpoints;
-* a missing environment endpoint fails closed;
-* an unknown environment fails closed;
-* values from one environment cannot leak into another;
-* local configuration is never used as a higher-environment fallback;
-* endpoints are not duplicated or hard-coded in deployment scripts;
-* secrets are not present in endpoint configuration.
+Do not:
 
-Use sanitized endpoint identifiers in reports. Do not expose credentials, query tokens or certificates.
+* commit;
+* push;
+* create a PR;
+* publish;
+* deploy;
+* mutate /app/clue;
+* contact providers;
+* use the stale /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz;
+* overwrite an existing artifact;
+* request or use a personal password.
 
-7. Agent responsibilities
+Required recovery report
 
-Manager
+Before resuming implementation, report:
 
-The Manager must:
+* whether every other writer is stopped;
+* current branch and full HEAD;
+* complete changed-file ownership map;
+* recovery snapshot location;
+* exact envsettings.py collision;
+* exact import failure;
+* files safe to preserve unchanged;
+* files requiring surgical reconciliation;
+* confirmation that no destructive Git operation occurred;
+* verdict:
 
-* inspect native Git status and current repository evidence first;
-* preserve unrelated working-tree changes;
-* maintain an iteration ledger outside the repository;
-* issue one bounded defect ticket at a time;
-* prevent Developer and Tester from operating concurrently on the shared tree;
-* reject scope expansion;
-* classify failures as code, test, configuration, environmental or authorization failures;
-* authorize a fresh complete test cycle after every repair;
-* make the final readiness decision.
+WORKTREE_STABILIZED_READY_TO_RECONCILE
 
-The Manager must not edit implementation files.
+or
 
-Deployment Developer
-
-The Developer may:
-
-* reproduce a deployment/configuration failure safely;
-* edit only permitted files;
-* add or improve relevant tests;
-* run focused tests;
-* update operator documentation when behavior changes.
-
-The Developer must report:
-
-* root cause;
-* changed files;
-* focused test commands and results;
-* security impact;
-* environment impact;
-* remaining uncertainty.
-
-The Developer cannot declare the subsystem ready.
-
-Independent Deployment Tester
-
-The Tester must:
-
-* remain independent from implementation;
-* never repair code or tests;
-* start the full acceptance pipeline from Stage 0 after every repair;
-* report the first actionable failure with reproduction evidence;
-* return either TESTER_FAIL or TESTER_PASS.
-
-Passing results reported by the Developer are not acceptance evidence.
-
-8. Internal scenario laboratory
-
-Before any real-server work, build a non-privileged test harness that exercises deployment behavior using temporary roots and controlled command doubles.
-
-The harness must not require root or sudo.
-
-Use safe fake implementations for external operating-system boundaries such as:
-
-* sudo;
-* salt-call;
-* hostname lookup;
-* account lookup;
-* ownership operations;
-* AutoSys invocation where applicable;
-* filesystem activation and rollback boundaries.
-
-The fake commands must record sanitized arguments and return controlled results. They must never contain real secret values.
-
-Run the scenario matrix for dev, pat and prod.
-
-Identity and privilege scenarios
-
-Test:
-
-* correct NPID;
-* wrong NPID;
-* root execution where prohibited;
-* missing sudoers rule;
-* exact allowed sudoers rule;
-* overly broad or unsafe sudoers rule;
-* password prompt attempted;
-* TTY present;
-* no controlling TTY;
-* missing SSH identity;
-* unexpected host;
-* missing EXPECT_HOST;
-* conflicting environment identity.
-
-Any attempt to prompt for a password is a test failure.
-
-Configuration scenarios
-
-Test:
-
-* valid DEV/PAT/Production configuration;
-* missing file;
-* unreadable file;
-* malformed YAML or .conf;
-* missing required property;
-* duplicate or conflicting property;
-* unresolved placeholder;
-* unknown environment;
-* mixed environment files;
-* endpoint cross-contamination;
-* secret-like value stored in configuration;
-* invalid path;
-* unsafe relative path;
-* environment override attempts.
-
-Artifact scenarios
-
-Test:
-
-* valid artifact;
-* missing required member;
-* incorrect executable mode;
-* unsafe absolute path;
-* .. traversal;
-* symlink or hardlink;
-* device/FIFO member;
-* duplicate path;
-* unexpected wrapper directory;
-* checksum missing;
-* checksum mismatch;
-* secret-bearing filename;
-* private-key block;
-* real certificate material;
-* extraction failure;
-* insufficient space;
-* interrupted extraction.
-
-Existing-installation scenarios
-
-Test:
-
-* no previous installation;
-* healthy existing installation;
-* incomplete previous installation;
-* corrupt staging directory;
-* stale lock;
-* active concurrent installer;
-* validation failure before activation;
-* activation failure;
-* interruption during replacement;
-* rollback success;
-* rollback failure.
-
-The final implementation must provide:
-
-* exclusive installation locking;
-* staging separate from the active tree;
-* validation before activation;
-* atomic activation where the filesystem supports it;
-* documented rollback;
-* fail-closed behavior when rollback safety cannot be guaranteed.
-
-Runtime-secret scenarios
-
-Without printing material, test:
-
-* all four approved Pillar values available;
-* missing value;
-* empty value;
-* malformed JSON;
-* Salt timeout;
-* Salt nonzero exit;
-* sudo authorization missing;
-* interactive password attempt;
-* already-readable PEM;
-* safely reconstructable flattened PEM;
-* unsafe flattened value;
-* unencrypted private key;
-* encrypted private key;
-* certificate/private-key mismatch;
-* expired or invalid certificate where currently validated.
-
-The invalid fixed probe value must remain non-secret:
-
-pass:clue-probe-not-a-passphrase
-
-9. Acceptance pipeline
-
-After every Developer repair, the Tester must restart at Stage 0.
-
-Stage 0 — Repository and scope
-
-Verify:
-
-* branch and full HEAD;
-* Git status;
-* pre-existing versus new changes;
-* no unrelated change;
-* no prohibited file modification;
-* required skills/scripts/configurations exist.
-
-Stage 1 — Syntax and schema
-
-Run:
-
-* bash -n on every shipped shell script;
-* Python syntax/import validation where relevant;
-* YAML and .conf parsing;
-* environment schema validation;
-* documentation/configuration drift checks.
-
-Stage 2 — Focused deployment tests
-
-Run the complete internal scenario laboratory for all three environments.
-
-Required result:
-
-* zero failures;
-* zero password prompts;
-* no real provider call;
-* no real secret retrieval;
-* no privileged host mutation.
-
-Stage 3 — Deployment security inspection
-
-Search implementation and operator paths for unsafe patterns including:
-
-sudo -S
-sudo -i
-su -
-sshpass
-SUDO_ASKPASS
-read -s
-expect
-password=
-
-Classify test fixtures and explanatory negative examples separately. No executable operator path may contain password automation.
-
-Also verify that all permitted sudo operations are:
-
-* absolute-path;
-* noninteractive;
-* command-scoped;
-* validated before mutation.
-
-Stage 4 — Full repository regression
-
-Run the complete supported repository test suite from a fresh process.
-
-Required result:
-
-* zero failed tests;
-* zero unexpected errors;
-* every skip counted and explained;
-* no test disabled, weakened or deleted merely to obtain a pass.
-
-Stage 5 — Fresh test artifact
-
-Build a unique test-only artifact from current intended Deliverables/ bytes.
-
-Requirements:
-
-* do not overwrite an existing artifact;
-* do not reuse an old root-default artifact;
-* safe rootless archive layout where required;
-* required executable modes;
-* no credential or secret material;
-* successful clean extraction;
-* source-to-artifact byte comparison;
-* mandatory SHA-256 sidecar;
-* sidecar verification before installation.
-
-Stage 6 — Three-environment clean-room matrix
-
-Using separate temporary application roots, run the complete installer flow for:
-
-* DEV;
-* PAT;
-* Production.
-
-These are simulations only.
-
-For each environment prove:
-
-* correct deployment configuration selected;
-* correct runtime YAML selected;
-* correct sanitized endpoint identity selected;
-* correct NPID and application root contract selected;
-* no other environment file loaded;
-* no password requested;
-* no live external call;
-* activation and rollback behavior pass.
-
-Stage 7 — Actual DEV acceptance
-
-Proceed only if Stages 0–6 pass and the session has approved DEV access.
-
-Use:
-
-* approved noninteractive SSH identity, if remote access is required;
-* exact DEV NPID;
-* /app/clue;
-* explicit --environment dev;
-* verified artifact SHA-256;
-* documented preflight;
-* no live provider transaction.
-
-If the DEV connection asks for a password, stop. Do not request or use the owner’s password.
-
-Run the installation and an offline/fixture smoke test. Sanitize all evidence.
-
-Stage 8 — PAT and Production readiness
-
-Do not connect to or mutate PAT or Production without separate explicit authorization.
-
-Instead, produce a readiness package for each environment containing:
-
-* validated configuration identity;
-* unresolved owner-controlled fields;
-* exact required NPID;
-* expected host;
-* application root;
-* required one-time bootstrap;
-* exact noninteractive preflight;
-* checksum-protected installation command;
-* rollback command;
-* AutoSys entry-point contract;
-* sanitized acceptance checklist.
-
-Internal simulation is evidence of implementation portability, not proof of successful installation on the actual PAT or Production host.
-
-10. Autonomous repair loop
-
-For ordinary implementation or test failures:
-
-Tester FAIL
-→ Manager classifies the root cause
-→ Manager issues a bounded Developer ticket
-→ Developer repairs and runs focused checks
-→ Manager reviews scope
-→ Tester restarts at Stage 0
-
-Continue without asking for approval for ordinary in-scope repairs.
-
-Stop rather than loop when the missing evidence is external, including:
-
-* missing SSH/service identity;
-* missing administrator bootstrap;
-* unknown PAT/Production NPID;
-* unknown EXPECT_HOST;
-* unresolved AutoSys command/account/working directory;
-* missing approved endpoint;
-* unavailable secret-store permission;
-* missing environment owner approval;
-* required live-provider certification;
-* required out-of-scope code change.
-
-Code changes cannot manufacture external authorization or owner-controlled values.
-
-Apply a no-progress circuit breaker when:
-
-* the same root cause survives two materially different repairs;
-* three iterations produce no new evidence;
-* the next action could damage an existing installation;
-* rollback cannot be guaranteed.
-
-11. Readiness verdicts
-
-The Tester alone may issue:
-
-TESTER_PASS
-
-The Manager may then issue one of these evidence-based verdicts:
-
-DEPLOYMENT_CONFIGURATION_RELEASE_CANDIDATE_READY
-
-Use only when:
-
-* all internal DEV/PAT/Production matrix tests pass;
-* full regression passes;
-* artifact validation passes;
-* clean-room installations pass;
-* rollback and locking pass;
-* passwordless operator behavior is proven;
-* actual DEV acceptance passes;
-* remaining PAT/Production work is limited to controlled environment acceptance.
-
-DEPLOYMENT_CONFIGURATION_FULLY_ACCEPTED
-
-Use only when authorized acceptance evidence also exists from the real DEV, PAT and Production environments.
-
-EXTERNAL_ENVIRONMENT_ACCEPTANCE_PENDING
-
-Use when internal implementation is green but one or more real environment acceptances have not occurred.
-
-PASSWORDLESS_ACCESS_PREREQUISITE_MISSING
-
-Use when approved noninteractive NPID/SSH/sudoers prerequisites are absent.
-
-DEPLOYMENT_CONFIGURATION_BLOCKED
-
-Use for unresolved owner-controlled or operational inputs.
-
-DEPLOYMENT_CONFIGURATION_VERIFICATION_FAILED
-
-Use when an implementation or test failure remains.
-
-Never label the entire CLUE business product Production-ready based only on deployment/configuration tests. Live Symcor/Tungsten readiness, business acceptance, signing, SBOM, promotion, and Production operational approval remain separate gates.
-
-12. Final evidence report
-
-The Manager’s final report must include:
-
-* branch and full HEAD;
-* working-tree status;
-* exact changed files;
-* number of repair iterations;
-* defects found and resolved;
-* DEV/PAT/Production matrix results;
-* passwordless-execution tests;
-* sudoers safety result;
-* focused and full-suite test counts;
-* skipped tests and reasons;
-* artifact filename, size and full SHA-256;
-* archive and secret-scan results;
-* locking and rollback results;
-* clean-room installation results;
-* actual DEV result, if authorized;
-* PAT/Production external acceptance state;
-* unresolved owner inputs;
-* final verdict.
-
-Do not commit, push, create a PR, publish, promote or deploy to PAT/Production unless separately and explicitly authorized.
+CONCURRENT_WRITER_STILL_ACTIVE
