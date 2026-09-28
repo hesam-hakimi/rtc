@@ -1,174 +1,135 @@
-Before I follow Deliverables/docs/CLUE_OPERATIONAL_DEPLOYMENT.md, perform a strict read-only runbook-to-code audit.
+Accept the read-only audit verdict:
 
-Do not install, extract into /app/clue, request a password, invoke sudo interactively, retrieve secrets, contact providers, edit files, rebuild the artifact, publish, commit, push, reset, stash or clean anything.
+RUNBOOK_PARTIALLY_MATCHES_CORRECTIONS_REQUIRED
 
-Evidence to inspect
+Do not install yet. Resolve D-1, D-2 and D-3, update the runbook to match the resulting code, rebuild a uniquely identified artifact, and repeat the read-only audit. Installation is authorized only after the repeated verdict is RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED.
 
-Compare the current runbook against:
+Maintain a single writer. Preserve unrelated staged and working-tree changes. Do not reset, checkout, clean, stash or restore whole files. Do not modify CI/CD, pom.xml, assembly.xml, Salt infrastructure or system sudoers. Do not commit, push, publish or contact Symcor/Tungsten.
 
-* Deliverables/deploy/clue_install_release.sh
-* Deliverables/deploy/clue_preinstall_check.sh
-* Deliverables/deploy/clue_operational_wrapper.sh
-* Deliverables/config/deployment_env_conf/dev.conf
-* Deliverables/config/deployment_env_conf/pat.conf
-* Deliverables/config/deployment_env_conf/prod.conf
-* Deliverables/config/environments/dev.yaml
-* Deliverables/config/environments/pat.yaml
-* Deliverables/config/environments/prod.yaml
-* relevant Python environment/runtime loaders and entry points;
-* installer, wrapper and documentation tests;
-* the exact artifact already transferred to the DEV host.
+D-1 — eliminate ambiguous artifact selection
 
-Confirm that the transferred artifact checksum still matches the locally built artifact before treating packaged files as evidence.
+The runbook currently derives:
 
-Required audit method
+/tmp/clue-code-1.1.4-SNAPSHOT.tar.gz
 
-For every executable step in the runbook, produce a table containing:
+but that path contains a different older artifact. The audited artifact was renamed externally and must not be rediscovered by a broad glob.
 
-1. runbook section and command;
-2. corresponding script/function and line reference;
-3. required starting state;
-4. expected behavior;
-5. expected exit code;
-6. whether it mutates anything;
-7. verdict:
-    * MATCH
-    * PARTIAL_MATCH
-    * CONTRADICTION
-    * STALE_DOCUMENTATION
-    * NOT_PROVEN
-8. smallest required correction.
+Correct the contract so that:
 
-Do not treat an existing test as sufficient evidence by itself. Trace the actual code path and confirm that the packaged artifact contains the same implementation.
+* A manually supplied artifact always requires an explicit absolute ARCHIVE path.
+* EXPECTED_SHA256 is supplied by the builder and is mandatory for this DEV acceptance run.
+* The runbook never derives or guesses a manual-upload filename from RELEASE.
+* The exact artifact path and SHA-256 are verified before staging.
+* No existing artifact is overwritten or silently reused.
+* Nexus download and manually supplied archive are documented as separate acquisition modes.
+* First-install Nexus bootstrap explicitly receives the repository location externally because package profiles cannot be read before acquisition.
+* After staging, the package’s profile must agree with the supplied environment/repository assertions.
+* Stale 1.1.3-SNAPSHOT examples, the incorrect “Step 4” reference and obsolete filenames are corrected.
+* Exit code 11 is added to the documented table.
+* PAT/Production documentation marks only genuinely unresolved external values as UNCONFIRMED; do not describe already confirmed host/NPID/root values as unknown.
 
-Questions that must be answered explicitly
+Do not hardcode the current temporary test-artifact path into permanent product logic. The current execution example may show its exact path and checksum, clearly labelled as session-specific.
 
-Acquisition and bootstrap
+D-2 — document and secure the authorized Pillar check
 
-* For a first installation, how does the operator obtain the archive and installer?
-* Confirm that environment profiles cannot be read before the archive is downloaded or otherwise received and safely staged.
-* Determine whether the installer itself performs Nexus resolution/download, or whether the pasted bootstrap block performs it before the installer exists.
-* Reconstruct the exact real order:
-    environment/version selection → download or supplied archive → checksum/archive validation → safe staging → profile loading → preflight → installation.
-* Check whether the hard-coded NEXUS_BASE in the runbook matches code/configuration and supports both snapshots and promoted releases.
-* Confirm the current artifact filename, version and SHA-256. Flag every example still using 1.1.3-SNAPSHOT or an obsolete filename.
+Owner authorization for the eventual real DEV install:
 
-Identity and interactive DEV exception
+* The installer may retrieve the four real runtime values through the existing Salt Pillar wrapper.
+* This authorization applies only to the final interactive DEV installation after the new audit passes.
+* It does not authorize provider calls.
+* It does not authorize printing, logging or persisting secret values.
+* It does not authorize .env or arbitrary process-environment credential fallback.
 
-The normal product contract remains passwordless and uses exact sudo -n delegation.
+Verify and test that the secrets stage:
 
-For this one manual DEV installation test, the owner is willing to type the sudo password directly into a real interactive terminal. Determine, without executing installation, whether this exact approach is supported:
+* runs only after environment/profile/host/NPID agreement;
+* performs exactly the intended four Pillar lookups;
+* uses the existing constrained runtime-secret path;
+* never prints secret values;
+* does not print shortened key fingerprints or temporary key/certificate paths;
+* creates any temporary certificate/key material with the required ownership and permissions;
+* cleans temporary material on success and handled failure/signals;
+* performs cryptographic validation and fails closed if OpenSSL is unavailable;
+* performs no Symcor or Tungsten call;
+* reports only a redacted success/failure summary.
 
-sudo -u tclue999devs -- <staged-installer> <documented arguments>
+Update the runbook to state plainly that a normal non-dry-run installation performs this real Pillar readiness check. Distinguish it from provider execution.
 
-Confirm whether starting the installer this way makes it enter direct mode as tclue999devs and avoids its internal sudo -n delegated path.
+Resolve the documentation contradiction around /etc/sudoers.d/clue-runtime-secrets:
 
-Do not assume this works. Trace the code and verify:
+* administrative/root bootstrap may provision it;
+* an ordinary NPID/non-root install may only validate and use the pre-existing authorization;
+* an ordinary install must never create or modify sudoers.
 
-* installer path and archive are readable/executable by tclue999devs;
-* required environment variables survive or are passed explicitly;
-* TMP_ROOT is writable;
-* checksum arguments remain intact;
-* the command does not become root;
-* no internal identity check rejects it;
-* dry-run and real-install commands differ only as documented.
+Do not retrieve real Pillar values during this correction/build/audit turn.
 
-The password must never be accepted through chat, stdin piping, sudo -S, environment variables, files, SUDO_ASKPASS, expect or sshpass.
+D-3 — safe first upgrade from a markerless legacy installation
 
-Do not modify the main runbook to describe interactive-password installation as the normal procedure. If code supports it, propose a separately labelled “manual DEV test exception” command.
+The existing DEV /app/clue predates config/active_environment. Current rollback cannot safely restore that markerless backup.
 
-Existing installation and marker migration
+Implement a minimal explicit first-upgrade contract. Requirements:
 
-The current /app/clue predates config/active_environment.
+* A markerless existing installation must fail closed before mutation unless the operator supplies an explicit legacy-adoption option.
+* The option must name the environment and must exactly equal --environment.
+* Adoption must also require the selected profile’s expected host, NPID, group and /app/clue ownership to match.
+* Missing marker may be adopted; malformed, multi-line, symlinked, unknown or contradictory markers must never be adopted.
+* The current live tree must not be silently relabelled.
+* The backup must carry sufficient verified metadata so rollback restores the legacy application together with a valid config/active_environment.
+* Rollback must remain same-environment only.
+* A failed installation after backup must be able to restore the adopted legacy backup automatically.
+* The action and selected environment must be clearly reported without exposing secrets.
 
-Trace what happens when the new installer replaces this legacy tree:
+Choose a clear option name based on the existing CLI style. Document it only under a separately labelled “first upgrade from a pre-marker installation” section.
 
-* Can it safely back up an installation that has no marker?
-* Can installation proceed while the old wrapper fails closed?
-* What marker is placed into the new tree?
-* Can rollback to the legacy backup work without incorrectly relabelling its environment?
-* Does this require an explicit migration or first-upgrade rule?
+Add behavioral tests proving:
 
-Do not permit the real installation until this case is proven safe.
+1. markerless tree without the explicit option fails before mutation;
+2. mismatched adoption environment fails;
+3. wrong host/NPID/ownership fails;
+4. valid DEV adoption creates a recoverable backup;
+5. injected installation failure restores the legacy bytes plus valid DEV marker;
+6. manual rollback restores the adopted backup;
+7. cross-environment restore remains refused;
+8. normal installations with a valid marker remain unchanged.
 
-Environment profiles and runtime behavior
+Remaining documentation corrections
 
-* Verify that copying DEV/PAT/Production profiles does not activate all three.
-* Verify that the installer writes exactly one config/active_environment.
-* Confirm marker = deployment profile = CLUE_ENV = RUNTIME_CONFIG target = YAML environment.
-* Compare the runbook environment table with current profiles. Distinguish confirmed NPID/host/root values from only the still-unconfirmed PAT/Production Tungsten endpoint values.
-* Check whether statements claiming PAT/Production host or account values are unconfirmed are now stale.
-* Confirm CLI environment and NPID values are assertions, not overrides.
+Apply the audit’s evidence-backed corrections:
 
-Offline versus live execution
+* Reword the preflight staged-path requirement to match the actual initiator ownership rule; do not call it root-owned.
+* Split the secrets-stage description by root/bootstrap versus ordinary NPID mode.
+* Label section 1.8 explicitly as fixtures-only offline evidence.
+* State that it does not prove live Symcor/Tungsten readiness.
+* Keep the interactive-password DEV test as a separately labelled manual exception, never as the normal passwordless procedure.
+* Document that the NPID must extract/own its own staged installer copy before the interactive command is run.
+* Preserve the normal passwordless/AutoSys requirement as unresolved until exact NOPASSWD delegation or direct NPID execution is available.
 
-* Verify the exact DEV offline-validation command.
-* Confirm whether DEV still has provider_mode: fixtures.
-* If so, state clearly that section 1.8 proves only offline fixture execution and cannot prove live Symcor/Tungsten readiness.
-* Identify the separate supported operational command for live-provider execution.
-* Confirm whether installed live execution requires the runtime-secret wrapper and cannot silently fall back to fixtures, .env or arbitrary process credentials.
-* Do not perform a real provider or secret call.
+Verification loop
 
-Administrative prerequisites and secrets
+After the changes:
 
-Resolve the apparent contradiction between:
+1. Run focused installer, rollback, environment, runtime-secret, wrapper and documentation tests.
+2. Run shell syntax checks.
+3. Run the complete regression suite on a stable tree.
+4. Require zero implementation failures.
+5. Record all skips and prove none hides the changed behavior.
+6. Build a new uniquely named test artifact without modifying pom.xml or assembly.xml.
+7. Record its exact size, member count and SHA-256.
+8. Validate archive safety and source/package byte parity.
+9. Transfer it to a new unique DEV staging path without overwriting existing artifacts.
+10. Verify local and remote SHA-256 equality.
+11. Repeat the strict read-only runbook-to-code audit against the new packaged bytes.
 
-* the one-time bootstrap section saying an administrator provisions /etc/sudoers.d/clue-runtime-secrets; and
-* the internal stage table saying the installer “installs and validates” it.
-
-Trace the code and state exactly:
-
-* which mode may create or modify the sudoers file;
-* whether a normal NPID/non-root install only validates a pre-existing rule;
-* whether any ordinary installation step unexpectedly requires root;
-* what happens when the rule is absent.
-
-Remaining contract
-
-Verify against code:
-
-* preflight status and exit codes;
-* dry-run non-mutation;
-* lock acquisition and cleanup;
-* safe archive validation;
-* rootless extraction layout;
-* ownership and mode checks;
-* dependency installation;
-* active-marker validation;
-* failure restoration;
-* same-environment rollback;
-* cross-environment rollback refusal;
-* recovery commands;
-* documented exit-code table.
-
-Permitted verification
-
-You may run only demonstrably non-mutating local checks such as:
-
-* syntax checks;
-* --help;
-* test collection;
-* focused documentation/contract tests;
-* safe archive listing;
-* checksum comparison;
-* source and packaged-file comparisons.
-
-A remote preflight or dry-run may be used only after its code path is proven non-mutating. Do not invoke any command that can prompt for a password during this audit.
-
-Final output
+Do not perform the actual installation, invoke interactive sudo or retrieve Pillar secrets in this turn.
 
 Return:
 
-1. the complete step-by-step compatibility matrix;
-2. every mismatch, stale value and unresolved claim;
-3. the exact corrected DEV operator sequence supported by current code;
-4. a separate proposed interactive-password DEV-test command, only if code proves it safe;
-5. a list of documentation corrections and code corrections, kept separate;
-6. one final verdict:
+* changed files and reasons;
+* the chosen legacy-adoption CLI contract;
+* focused and full-suite commands, exits and counts;
+* new artifact identity and local/remote checksum evidence;
+* updated runbook-to-code compatibility matrix;
+* confirmation that /app/clue remained untouched;
+* final verdict.
 
-* RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED
-* RUNBOOK_PARTIALLY_MATCHES_CORRECTIONS_REQUIRED
-* RUNBOOK_CONTRADICTS_CODE_DO_NOT_PROCEED
-* INSUFFICIENT_EVIDENCE_DO_NOT_PROCEED
-
-Do not edit anything yet. I will review the audit before authorizing documentation changes or installation.
+Only RUNBOOK_MATCHES_CODE_SAFE_TO_PROCEED authorizes the following interactive installation turn. Otherwise stop with the remaining exact blockers.
