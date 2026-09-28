@@ -1,294 +1,301 @@
-Continue from the current reconciled CLUE working tree. Do not restart the project, restore older whole-file versions, or discard any existing work.
+Investigate whether the current CLUE application reads its runtime keys and credentials directly from HashiCorp Vault, receives them through Salt Pillar, or uses another source.
 
-This is an implementation, test-repair, failure-injection, regression-verification, and gated test-artifact task.
+Run this in a separate read-only session while the main implementation session continues.
 
-Use English for all engineering output, code, tests, comments, documentation, and reports.
+Use English for all engineering output.
 
-Coordination and source protection
+Absolute read-only boundary
 
-You are the sole writer for this task. Other environment/Vault investigation sessions are read-only.
+* Do not edit, create, delete, restore, format, stage, or rewrite any repository file.
+* Do not commit, push, fetch, merge, rebase, stash, reset, clean, checkout, tag, or open/update a PR.
+* Do not build an artifact, install, publish, deploy, or mutate /app/clue.
+* Do not execute live salt-call, Vault, Symcor, Tungsten, Nexus, or other provider requests.
+* Do not request or use the owner’s password.
+* Do not retrieve, display, decode, hash, or expose real secret values.
+* Do not open or print real certificate or private-key contents.
+* Do not print environment variables that could contain secrets.
+* Do not modify Salt formulas, sudoers, CI/CD, pom.xml, or assembly configuration.
+* Report findings in chat only.
 
-Before editing:
+Concurrent-change protection
 
-1. Record repository root, branch, full HEAD, upstream, and porcelain-v2 status.
-2. Preserve all staged, unstaged, and untracked work.
-3. Do not unstage, reset, checkout, stash, clean, or overwrite files.
-4. Do not run git add; the index was staged outside the earlier investigation.
-5. Hash the files you will edit and confirm no concurrent writer is changing them.
-6. If source drift occurs while working, stop and report it rather than overwriting it.
+Another session is actively implementing Phase 3.
 
-Do not commit, push, tag, create/update a PR, publish, deploy, mutate /app/clue, contact providers, retrieve real secrets, or request a password.
+At the start, record:
 
-Do not modify CI/CD, pom.xml, assembly.xml, Salt formulas, or unrelated application behavior.
+* repository root;
+* branch and full HEAD;
+* concise Git status;
+* content hashes for every file examined in the final evidence, especially:
+    * batch.py;
+    * envsettings.py;
+    * config.py;
+    * clue_with_runtime_secrets.sh;
+    * clue_operational_wrapper.sh;
+    * clue_install_release.sh;
+    * deployment profiles;
+    * environment YAMLs;
+    * relevant tests.
 
-Accepted baseline
+At the end, record HEAD, status, and the same hashes again.
 
-The latest reported focused evidence is:
+If any relevant file changes during the investigation:
 
-* installer + operational-wrapper suites: 169 passed, 1 skipped;
-* active-environment suite: 36 passed, 1 skipped;
-* combined four deployment suites including the identity matrix: 255 passed, 2 skipped, exit 0;
-* no known failure remains in those focused suites.
+* do not reread a mixture of old and new files and issue a definitive conclusion;
+* identify exactly which files changed;
+* mark the affected conclusion as PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE;
+* state what must be rechecked after Phase 3 completes.
 
-Two implementation defects were already repaired:
+Do not interfere with the active writer.
 
-* whitespace-containing marker values such as dev pat are rejected;
-* wrapper validation now proves:
+Core question
 
-active marker == deployment profile CLUE_ENV == runtime YAML environment
+Answer these questions separately:
 
-Preserve these corrections and the existing non-root installation model.
+1. Does the shipped Python application directly authenticate to and read from HashiCorp Vault?
+2. Does a shell wrapper retrieve runtime values using Salt Pillar?
+3. Is the Salt/Pillar backend’s connection to Vault proven by repository evidence, or is it an external platform configuration?
+4. How are retrieved values delivered to the main Python process?
+5. Can any execution path bypass runtime-secret retrieval and use local, static, CLI, env-file, or arbitrary process-environment credentials?
 
-Do not reopen Phase 1 or Phase 2 unless a new test reproduces a genuine defect.
+Do not treat the word “Vault” in documentation as proof of direct Vault integration.
 
-Phase 3 — bind the main application to the installed environment
+Separate the architecture into four layers
 
-The installer is responsible for creating the marker during staging. The main application is responsible for consuming and enforcing it at runtime.
+Trace and report these layers independently:
 
-Implement one central application-level runtime-context resolver. Reuse and strengthen the existing envsettings.py loader rather than creating a second competing loader.
+1. System of record
+    HashiCorp Vault, another secret store, local file, process environment, or unknown.
+2. Platform retrieval
+    Salt master/minion, Pillar backend, Vault plugin, or external platform configuration.
+3. CLUE runtime bridge
+    The exact wrapper and salt-call pillar.get commands.
+4. Application consumption
+    Python configuration loading and the Symcor/Tungsten client constructors.
 
-The authoritative installed flow must be:
+Direct Vault-client investigation
 
-installer --environment
-    → staged config/active_environment
-    → activated installed release
-    → central Python runtime-context resolver
-    → matching deployment profile
-    → matching RUNTIME_CONFIG
-    → matching environment YAML
-    → runtime-secret validation
-    → provider construction
+Inspect current executable source and dependency declarations for:
 
-Marker and application-root contract
+* hvac or any Vault SDK;
+* imports or modules containing vault;
+* direct HTTP requests to Vault endpoints;
+* Vault address, namespace, mount, role, token, AppRole, Kubernetes auth, certificate auth, or token-renewal logic;
+* HCORP, HASHICORP, VAULT_ADDR, VAULT_TOKEN, or equivalent settings;
+* feature switches that enable direct Vault access;
+* direct Vault access in Python, shell, or packaged runtime dependencies.
 
-* Resolve the marker relative to the actual installed application root selected by the installer.
-* Do not infer the environment from hostname, username, current working directory, endpoint, file order, or a DEV default.
-* Do not hard-code a different installation root.
-* Require a regular, non-symlink marker in installed operational mode.
-* Accept exactly one supported value: dev, pat, or prod, with only the already-supported optional final newline.
-* Reject empty, padded, multi-line, whitespace-containing, unknown, traversal, or symlinked values.
-* Read and validate the marker before accessing runtime secrets or constructing any provider client.
+Report exact files, lines, symbols, and dependency entries.
 
-Three-way configuration agreement
+If no direct client exists, say explicitly:
 
-From the marker, resolve the matching deployment profile and its RUNTIME_CONFIG.
+The CLUE application is not a direct Vault client.
 
-Require exact agreement among:
+Do not infer that Vault is absent merely because Python does not contact it; Salt/Pillar may still use Vault externally.
 
-active_environment
-deployment profile CLUE_ENV
-RUNTIME_CONFIG target
-YAML environment
+Salt/Pillar runtime bridge
 
-Requirements:
+Inspect the current installer and runtime-secret wrapper and determine:
 
-* RUNTIME_CONFIG must remain inside the installed application root.
-* Reject absolute escape, .. traversal, wrong-environment YAML, missing files, unsupported types, and unsafe symlinks.
-* Parse only the required deployment-profile assignments; do not execute an arbitrary shell profile in Python.
-* Return one immutable validated runtime-context object for all application consumers.
-
-CLI and process-environment behavior
-
-For installed provider-contacting execution:
-
-* --environment is an assertion only. If supplied, it must equal the marker.
-* --config is an assertion only. If supplied, it must resolve to the canonical selected YAML.
-* Endpoint CLI options must not silently replace the selected environment’s values.
-* Arbitrary process environment variables must not allow direct Python execution to cross from one environment to another.
-* Do not use missing configuration as permission to default to DEV or fixtures.
-* PAT and Production must remain fail-closed while their tungsten_base_url values are UNCONFIRMED.
-* Do not invent, copy, or guess those external values.
-
-Preserve explicitly selected offline/local fixture, replay, and loopback workflows, but keep them clearly separated from installed DEV/PAT/Production execution. An accidental omission of configuration must not select local/fixture mode.
-
-All executable entry points
-
-Audit and bind every provider-capable entry point to the same resolver, including:
-
-* clue-batch;
-* python -m clue.batch;
-* clue-tungsten;
-* any installed shell entry point used by AutoSys or operators.
-
-No provider-capable command may bypass the installed marker contract.
-
-Operational-wrapper handoff
-
-The existing wrapper currently validates installed identity but does not complete the application handoff.
-
-Using the existing scripts and without introducing a redundant wrapper:
-
-1. identify the intended supported operational command;
-2. validate marker/profile/YAML identity;
-3. retrieve runtime secrets only after environment validation;
-4. execute the real Python application using the canonical environment and absolute configuration selected by the resolver;
-5. preserve the child exit code and signal behavior;
-6. never retrieve secrets during --dry-run or validation-only operations.
-
-Use exec where appropriate so signals and exit status reach AutoSys correctly.
-
-Normal execution must remain possible for the approved NPID without the owner’s password. Do not add:
-
-* sudo -S;
-* sudo -i;
-* su -;
-* sshpass;
-* expect;
-* SUDO_ASKPASS;
-* broad root access.
-
-Retain only the exact command-scoped, non-interactive authorization already designed for required Salt calls.
-
-Phase 3 tests
-
-Add or strengthen tests that prove, for DEV, PAT, and Production:
-
-* installer writes the marker in staging before activation;
-* Python reads the installed marker;
-* marker/profile/YAML agreement succeeds;
-* every mismatch fails before credential access;
-* missing and malformed markers fail closed;
-* direct installed live execution without a marker fails closed;
-* explicit CLI environment/config mismatches fail closed;
-* endpoint cross-environment overrides fail closed;
-* no provider constructor is reached before context validation;
-* clue-batch, module execution, and clue-tungsten cannot bypass the resolver;
-* explicit offline/local execution remains available without contacting providers;
-* the supported operational wrapper reaches a stubbed Python child with the canonical context;
-* wrapper exit codes and signals propagate correctly;
-* no secret value appears in output.
-
-Use mocks and temporary directories only. Do not make live provider, Pillar, Vault, or Nexus calls.
-
-Do not weaken, delete, skip, or rename an existing test to obtain a green result.
-
-Phase 4 — re-run the deployment contract
-
-After Phase 3 is green, rerun:
-
-* installer tests;
-* operational-wrapper tests;
-* identity matrix;
-* active-environment tests;
-* environment selection/lifecycle/layout tests;
-* shell syntax for every shipped shell script.
-
-Run the exact previously green combined deployment command again and report its complete count.
-
-Phase 5 — rollback, failure injection, and concurrency
-
-Repair and prove the remaining deployment-safety requirements.
-
-Rollback marker integrity
-
-A rollback must restore the prior release and its prior marker bytes. It must not write the failed/new installation’s selected environment into the restored release.
-
-Cover:
-
-* same-environment rollback;
-* attempted cross-environment activation;
-* failure before swap;
-* failure after old release is preserved;
-* failure during activation;
-* failure during post-activation verification.
-
-Installer locking
-
-Add a minimal non-root-compatible lock that prevents concurrent installers from mutating the same application root.
-
-Requirements:
-
-* lock acquired before the first mutation;
-* second installer fails clearly and safely;
-* no broad root privilege;
-* stale-lock behavior is deterministic;
-* cleanup on normal exit, error, and signal;
-* lock metadata contains no secrets;
-* different isolated application roots do not block each other.
-
-Failure injection
-
-Test at least:
-
-* unsafe archive member;
-* extraction failure;
-* marker write/read-back failure;
-* profile/YAML mismatch;
-* permission failure;
-* activation failure;
-* interrupted install;
-* rollback failure reporting;
-* concurrent installer attempt.
-
-Prove that the existing installation remains usable or is restored whenever mutation has begun.
-
-Full regression loop
-
-After focused suites are green:
-
-1. run the full repository test suite;
-2. classify every failure as implementation defect, stale expectation, external prerequisite, or platform-only limitation;
-3. repair implementation defects;
-4. rerun the narrow failing suite;
-5. rerun all affected suites;
-6. rerun the full suite from the beginning;
-7. repeat until there are zero test failures.
-
-Run POSIX-specific and symlink cases on WSL/Linux if the Windows host cannot create the required symlinks. Do not claim complete Linux verification from a Windows skip.
-
-External PAT/Production Tungsten endpoint values are not implementation failures, but they must remain explicit fail-closed readiness gaps.
-
-Phase 6 — gated test artifact
-
-Do not build an artifact until:
-
-* Phase 3 is verified;
-* rollback and locking tests pass;
-* all focused suites pass;
-* the full regression suite has zero failures;
-* relevant Linux shell/symlink checks pass.
-
-Then verify that .github/skills/clue-test-release/SKILL.md exists in the current repository and follow its current instructions exactly.
-
-Build only a temporary test-labelled artifact from Deliverables/.
-
-Requirements:
-
-* unique filename reflecting current HEAD and Deliverables dirty state;
-* never overwrite the stale /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz;
-* mandatory SHA-256 sidecar;
-* safe relative archive paths;
-* required members and executable modes;
-* clean extraction;
-* byte comparison against the current Deliverables/ payload;
-* no PEM/private-key material, credentials, tokens, .env, or real secrets;
-* no publication, Nexus upload, deployment, promotion, signing, or Production claim.
+* the exact number of pillar.get calls;
+* their logical key names, without values;
+* whether they use the exact /usr/bin/salt-call binary;
+* whether execution is non-interactive;
+* whether JSON output is required and strictly parsed;
+* whether only the intended Tungsten and Symcor values are retrieved;
+* whether any Salt environment or Pillar path is hard-coded to DEV;
+* whether the active environment is validated before retrieval;
+* whether DEV, PAT, and Production are isolated safely;
+* whether the NPID can execute the flow without the owner’s password;
+* whether the sudoers rule is exact and command-scoped;
+* whether broad sudo, shell wildcards, arbitrary Pillar keys, or root execution are permitted;
+* whether a missing or unsafe authorization rule fails before provider execution.
+
+Do not run these commands. Establish behavior from executable code and tests.
+
+Runtime values to trace
+
+Trace each required value independently:
+
+* each Tungsten runtime value;
+* Symcor certificate material;
+* Symcor private-key material.
+
+For every value, trace:
+
+logical source
+→ retrieval code
+→ parsing
+→ validation
+→ temporary representation
+→ process handoff
+→ Python configuration
+→ provider client
+→ cleanup
+
+Report only logical key names, variable names, and paths. Never include real values.
+
+For each step identify:
+
+* exact file and line;
+* responsible function or shell section;
+* executing Unix identity;
+* whether sudo authorization is required;
+* whether the value exists in memory, process environment, command line, temporary file, permanent file, or configuration file;
+* permissions and ownership;
+* cleanup behavior on success, error, and signal.
+
+Certificate/private-key handling
+
+Verify from code whether the runtime wrapper:
+
+* never uses the repository’s reference/local PEM as runtime input;
+* reconstructs material only from runtime-retrieved bytes;
+* preserves already readable PEM bytes exactly;
+* fails closed if flattened material cannot be reconstructed safely;
+* validates the X.509 certificate;
+* validates the private key;
+* confirms the certificate and key form a pair;
+* uses pass:clue-probe-not-a-passphrase at every intended OpenSSL probe site;
+* handles the owner-confirmed unencrypted private key without prompting;
+* fails promptly for an encrypted key instead of opening /dev/tty;
+* creates temporary files with restrictive permissions;
+* removes temporary files after success, failure, and signals;
+* avoids placing private-key material in arguments, logs, reports, or permanent installed configuration.
+
+Do not inspect or test the real key.
+
+Python application consumption
+
+Determine exactly what the main application receives:
+
+* raw secret values;
+* environment variables;
+* certificate/key file paths;
+* a runtime configuration object;
+* or a combination.
+
+Identify:
+
+* where Python reads those values;
+* where Tungsten configuration is assembled;
+* where Symcor TLS configuration is assembled;
+* whether provider clients can be constructed before secret validation;
+* whether the values are cached or persisted;
+* whether exceptions or debug logging can disclose values;
+* whether python -m clue.batch, clue-batch, or clue-tungsten can bypass the secret wrapper;
+* whether env-file or arbitrary process-environment fallback remains possible in installed provider mode.
+
+Account for the current environment-contract finding: the installer and wrapper validate active_environment, but the Python application previously did not read that marker. Determine whether this affects secret/environment isolation in the exact snapshot examined.
+
+Vault-backed Pillar provenance
+
+Search for repository evidence that proves Salt Pillar is backed by HashiCorp Vault, such as:
+
+* Salt external-Pillar configuration;
+* Vault engine/plugin configuration;
+* authoritative mapping from logical Pillar keys to Vault paths;
+* environment/minion binding;
+* platform-owned documentation included in the repository;
+* tests that simulate the backend contract.
+
+Distinguish:
+
+* repository proof;
+* owner/platform report;
+* external configuration not present in this repository;
+* unsupported assumption.
+
+Do not require the application repository to contain platform secrets. If backend configuration is intentionally external, identify the minimum non-secret evidence needed from the Salt/Vault owner:
+
+* backend type;
+* environment mapping;
+* logical key mapping;
+* authorization identity;
+* rotation ownership;
+* confirmation that no cross-environment fallback exists.
+
+Test evidence
+
+Inspect existing tests for:
+
+* exact four-value retrieval;
+* no-TTY execution;
+* missing authorization;
+* unsafe/broad sudoers rejection;
+* malformed Salt JSON;
+* missing, null, or empty values;
+* flattened PEM reconstruction;
+* readable PEM byte preservation;
+* encrypted-key non-interactive failure;
+* invalid certificate;
+* certificate/private-key mismatch;
+* temporary-file permissions and cleanup;
+* secret redaction;
+* DEV/PAT/Production isolation;
+* direct application bypass;
+* wrapper-to-Python handoff.
+
+Do not describe a test as passed merely because the source exists. Separate:
+
+* code evidence;
+* test definition;
+* previously reported execution evidence;
+* freshly executed evidence;
+* missing coverage.
+
+Do not run live-provider or live-secret tests. Narrow local unit tests may be run only if they use synthetic values, temporary directories, disable caches/bytecode, and cannot interfere with the active implementation session.
+
+Required value table
+
+Produce one row for each runtime value:
+
+| Runtime value | System of record | Retrieval layer | Application consumer | Persistent? | Environment-bound? | Evidence | Status |
+
+Allowed statuses:
+
+* CONFIRMED
+* PARTIAL
+* EXTERNAL_CONFIGURATION
+* NOT_IMPLEMENTED
+* UNKNOWN
+
+Never display secret values.
+
+Required verdicts
+
+Issue exactly one application-integration verdict:
+
+* DIRECT_VAULT_CLIENT_VERIFIED
+* SALT_PILLAR_RUNTIME_SECRET_BRIDGE_VERIFIED
+* LOCAL_OR_STATIC_SECRET_SOURCE_DETECTED
+* PARTIAL_OR_ENVIRONMENT_UNSAFE_SECRET_FLOW
+* INSUFFICIENT_EVIDENCE
+* PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE
+
+Then issue exactly one backend-provenance verdict:
+
+* VAULT_BACKED_PILLAR_PROVEN_BY_REPOSITORY_EVIDENCE
+* VAULT_BACKED_PILLAR_REPORTED_BUT_NOT_REPOSITORY_VERIFIABLE
+* NON_VAULT_PILLAR_BACKEND_DETECTED
+* PILLAR_BACKEND_UNKNOWN
+* PRELIMINARY_DUE_TO_CONCURRENT_SOURCE_CHANGE
+
+A secure Salt/Pillar runtime bridge may be verified even when the external Salt-to-Vault backend cannot be proven from this repository. Do not combine those conclusions.
 
 Final report
 
-Report:
+Finish with:
 
-* starting and ending branch/HEAD/status;
-* files changed and why;
-* exact application environment-selection chain;
-* supported operational command;
-* non-root execution contract;
-* focused test commands and exact counts;
-* full-suite command and exact count;
-* Linux/WSL results and justified skips;
-* failure-injection and locking results;
-* artifact filename, absolute path, size, SHA-256, sidecar path, and archive validation results if built;
-* external values still required;
-* confirmation that no password, live secret, provider call, deployment, publication, commit, push, tag, or PR action occurred.
+1. whether Python directly contacts Vault;
+2. the exact implemented secret-delivery chain;
+3. whether normal NPID execution requires the owner’s password;
+4. whether DEV/PAT/Production secret isolation is implemented;
+5. any bypass, persistence, leakage, or overbroad-privilege risk;
+6. whether the application can run live without the runtime-secret wrapper;
+7. the non-secret evidence needed from the Salt/Vault owner;
+8. files that changed concurrently and conclusions requiring recheck;
+9. the smallest later corrective action, if required;
+10. confirmation that no repository file, Git state, secret store, provider, artifact, installation, or deployment was changed or accessed.
 
-Use only verdicts supported by evidence:
-
-* NON_ROOT_INSTALL_AND_ACTIVE_ENVIRONMENT_VERIFIED
-* APPLICATION_RUNTIME_ENVIRONMENT_CONTRACT_VERIFIED
-* DEPLOYMENT_TOOLING_TESTS_GREEN
-* IMPLEMENTATION_TEST_FAILURES_REMAIN
-* TEST_ARTIFACT_BUILT_NOT_PUBLISHED
-* EXTERNAL_TUNGSTEN_ENDPOINT_VALUES_REQUIRED
-* NOT_PRODUCTION_READY
-
-Do not claim Production readiness while external endpoints, Production execution/AutoSys evidence, or live-provider certification remain unresolved.
+Stop after the investigation report. Do not implement any correction.
