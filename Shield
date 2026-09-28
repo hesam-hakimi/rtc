@@ -1,97 +1,43 @@
-Continue from the current working tree and complete the correction work. Do not restart, restore older files, discard changes, commit, push, publish, or modify CI/CD or pom.xml.
+Continue now without waiting for further confirmation.
 
-Authoritative ownership boundary
+Your status assessment is accepted. Stay in Phase A and finish every remaining correction before running any test or acceptance command.
 
-Implement and document this exact operational contract:
+Complete all listed remaining Phase A work:
 
-1. The human deployment operator downloads the exact artifact and places it in a transfer/inbound location.
-2. The operator does not extract or own the installer staging tree.
-3. The NPID creates its own private staging directory, extracts the selected installer/configuration files, runs preflight, and performs the installation.
-4. The NPID owns the installed /app/clue tree and runs the application.
-5. The interactive DEV exception may use ordinary TTY-based sudo -u <NPID> -H -- ..., but passwords must never be piped, stored, logged, supplied through sudo -S, or handled by automation.
-6. This interactive exception does not replace the unattended AutoSys/passwordless production contract.
-
-Phase A — finish all corrections before testing
-
-Do not run focused tests, the full regression suite, build an artifact, transfer anything, invoke sudo, retrieve Pillar values, contact providers, or touch /app/clue during this phase.
-
-Complete every known correction first:
-
-* Finish D-1 artifact acquisition and provenance:
-    * explicit absolute artifact path;
-    * mandatory non-empty builder-provided SHA-256;
-    * no filename derivation, broad glob, or guessed snapshot filename;
-    * clearly separate external/manual acquisition from Nexus acquisition;
-    * operator-owned inbound artifact followed by NPID-owned extraction/staging.
-* Finish D-2 secret-stage behavior and documentation:
-    * exactly four approved Salt Pillar lookups;
-    * no secret value printed, persisted, or placed in reports;
-    * fail closed on missing, malformed, empty, or cryptographically invalid material;
-    * guaranteed cleanup;
-    * no Symcor or Tungsten provider call during installation validation.
-* Finish D-3 legacy adoption and rollback:
-    * explicit --adopt-legacy <environment>;
-    * value must equal --environment;
-    * only a missing marker may be adopted;
-    * malformed or contradictory markers remain rejected;
-    * verify host, NPID, group, ownership, and mode before mutation;
-    * backup must carry enough validated environment metadata to support both automatic and manual rollback;
-    * cross-environment rollback must remain impossible.
-* Correct all runbook contradictions:
-    * staging ownership wording;
-    * root versus unprivileged secret-stage behavior;
+1. Finish the D-1 runbook rewrite:
+    * operator-owned inbound artifact;
+    * explicit absolute ARCHIVE;
+    * mandatory builder-provided SHA-256;
+    * no guessed or derived filenames;
+    * separate manual/external and Nexus acquisition modes;
+    * NPID-created and NPID-owned private staging after acquisition.
+2. Finish the D-2 runbook corrections:
+    * clearly state that a real non-dry-run installation performs the authorized four-value Pillar readiness check;
+    * distinguish readiness validation from provider execution;
+    * document that root/bootstrap may provision sudoers while ordinary NPID installation only validates and uses existing authorization;
+    * ensure ordinary installation never creates or modifies sudoers.
+3. Finish every remaining documentation correction already identified:
+    * staging ownership;
     * exit code 11;
-    * stale versions and cross-references;
-    * fixtures-only labeling;
-    * manual DEV exception;
-    * PAT/Production status: identities are configured, while only unresolved external endpoint values remain unconfirmed.
-* Investigate the package-index failure without assuming that Nexus is unavailable:
-    * compare the exact URL in dev.conf, YAML, preflight code, installer code, and the previously working configuration;
-    * distinguish the Nexus homepage from the exact PyPI /simple/ endpoint;
-    * inspect trailing-slash, redirect, GET-versus-HEAD, certificate, proxy, and authentication behavior;
-    * ensure Preflight validates the same access path that actual dependency installation will use;
-    * do not replace the PyPI repository with the raw artifact repository;
-    * never expose credentials in output.
+    * stale 1.1.3-SNAPSHOT references;
+    * incorrect “Step 4” reference;
+    * fixtures-only meaning of section 1.8;
+    * separately labelled interactive DEV exception;
+    * PAT/Production status wording.
+4. Finish the D-3 rollback implementation review:
+    * ensure adopted backup metadata is accepted by the RESTORING path;
+    * ensure both automatic failure restoration and manual rollback restore the legacy bytes with one valid environment marker;
+    * do not declare this proven until Phase B tests demonstrate it.
+5. Complete the closure matrix for every original audit finding, including corrected file/line ranges, resulting behavior and the future Phase B acceptance command.
 
-Before testing, produce a closure matrix containing every audit finding, its corrected file and line range, the resulting behavior, and its acceptance command. Do not ask for confirmation after each edit; complete Phase A first.
+Do not pause merely to report partial progress. Do not run tests, syntax checks, builds, transfers, sudo, SSH, Pillar retrieval, provider calls or installation while Phase A remains incomplete.
 
-Phase B — sequential gated validation
+Once Phase A is fully complete, explicitly print:
 
-After Phase A is complete, validate one gate at a time. Do not run gates in parallel and do not launch repeated full-suite runs during individual fixes.
+PHASE_A_COMPLETE_READY_FOR_SEQUENTIAL_VALIDATION
 
-For every gate:
+Then begin Phase B automatically and execute its gates strictly in the previously specified order, one at a time. Stop on the first failing gate, repair only that failure, rerun the same gate, and proceed only when it is green. Do not run gates in parallel and do not run the full suite repeatedly.
 
-1. Print the exact command.
-2. Execute it if it requires no interactive password or external provider contact.
-3. Record exit code and exact pass/fail counts.
-4. On failure, stop progression, classify the failure, repair it, and rerun the same gate.
-5. Move to the next gate only after the current gate is green.
+Preserve all current valid changes. Do not reset, checkout, clean, stash, commit, push, publish, modify CI/CD, pom.xml or assembly.xml, or touch /app/clue.
 
-Use this order:
-
-1. Shell syntax and Python import/compile checks.
-2. Focused D-1 acquisition/provenance tests.
-3. Focused D-2 secret-boundary tests using mocks only.
-4. Focused D-3 adoption, injected-failure, automatic rollback, manual rollback, and cross-environment refusal tests.
-5. Runbook-to-code contract tests.
-6. Runtime-environment and non-root identity suites.
-7. One bounded-worker or serial full repository regression run. Do not use pytest -n auto.
-8. Build one new uniquely named post-fix test artifact.
-9. Verify its manifest, safe paths, member set, byte parity, size, and SHA-256.
-10. Transfer that exact new artifact to a unique DEV inbound path and verify remote SHA-256.
-11. Perform a fresh read-only runbook-to-code and artifact audit.
-
-Both previously seen artifacts are stale for final installation:
-
-* /tmp/clue-code-1.1.4-SNAPSHOT.tar.gz with SHA beginning a6ea...
-* the earlier audited artifact with SHA beginning 25ce...
-
-Do not install either one because the installer source has changed since they were built.
-
-Only after the new artifact passes all gates may the DEV interactive phase begin. At any password-required step, print exactly one command and pause for the operator to run it in a real TTY. Never request or capture the password.
-
-The final report must clearly state either:
-
-RUNBOOK_MATCHES_NEW_ARTIFACT_SAFE_FOR_INTERACTIVE_DEV_PREFLIGHT
-
-or list the first unresolved blocker. Do not claim installation readiness merely because the test suite is green.
+The package-index correction must remain aligned with the real pip access behavior: bounded redacted GET, redirect-aware, no credential exposure, and no substitution of the PyPI repository with the raw artifact repository.
