@@ -1,19 +1,9 @@
-Proceed with the real merge safely.
+Hey Aryan, could you review the latest branch and focus on these areas?
 
-Requirements:
-1. Do not push, publish, release, or build a new artifact.
-2. Record the current branch, HEAD, origin/main commit, and full git status.
-3. Preserve every tracked and untracked local change in a clearly named stash using `git stash push -u`.
-4. Verify that the working tree is clean and the stash exists.
-5. Merge `origin/main` into the current branch. Do not rebase.
-6. Resolve the `.gitignore` conflict by preserving the union of both branches:
-   - keep the current branch’s `reports/` and pytest text-output exclusions;
-   - keep origin/main’s `.local/`, `*.code-workspace`, `*.tar.gz`, and tool/reference exclusions;
-   - remove only exact duplicates;
-   - do not choose Current or Incoming wholesale.
-7. Show the resolved `.gitignore` diff before completing the merge.
-8. Complete the merge locally, but do not push.
-9. Reapply the saved stash.
-10. If reapplying the stash creates any conflict, stop without discarding anything and report the exact files and conflict sections.
-11. If it applies cleanly, run only the existing lightweight shell/bootstrap checks—no full regression.
-12. Report final git status, merge commit, restored local files, checks performed, and confirm that nothing was pushed or published.
+* Run linting, type checks and static analysis; document all actionable findings.
+* Check dependencies for known vulnerabilities, deprecated packages and unsafe versions.
+* Review API input validation, exception handling, log sanitization and secret exposure risks.
+* Identify missing unit tests around security boundaries and critical error paths.
+* Flag dead/duplicated code and propose small, behavior-preserving refactors.
+
+Please share your findings first—don’t change existing features, architecture, authentication, or push any code until we align.
