@@ -1,17 +1,9 @@
-Priority: get one successful, real end-to-end CLUE run on the DEV server. Continue from the current installation.
+Please show me the actual Excel output from the successful DEV run you reported.
 
-1. Inspect the installed application, active DEV configuration, logs, and latest repository instructions. Verify the actual installation path, runtime NPID, endpoints, and credential-loading mechanism. Keep simulation disabled.
-2. Find an existing authorized DEV workbook containing at least one known valid cheque transaction. Verify the account/date/search inputs against available evidence. Do not send invented sample identifiers to real endpoints. If suitable input is unavailable, identify exactly what input is needed.
-3. Run the installed application under the runtime NPID using real DEV Symcor and Tungsten services. Use the supplied Tungsten Postman collection to check the request contract. If a command must be run from my terminal, provide the exact command.
-4. Diagnose each failure from the actual logs, apply the smallest necessary fix, and rerun until the complete flow succeeds. Preserve business logic and existing workbook requirements. Keep CI/CD, Maven, release packaging, and unrelated refactoring out of scope. Do not delete tests or test scripts.
+* Locate and open the generated workbook, and give me its exact path.
+* Make the workbook available for me to open or download.
+* Preview the first 10 rows of the result tab, including original source values, document IDs, front/back image paths, OCR fields, and confidence values.
+* Show the input row count, output row count, run timestamp, and exit code from the corresponding logs.
+* Clearly identify which run produced this workbook. If the newly prepared LIVE_CREDIT_PROVEN.xlsx run has not executed yet, say so and show the previous successful run’s output.
 
-Success requires observed evidence of:
-
-* At least one cheque retrieved from real Symcor DEV.
-* Required images successfully processed by real Tungsten DEV.
-* An output workbook preserving the original tabs and adding the required result tab with source values and returned OCR fields.
-* Successful application completion, with its actual exit code and summary.
-
-A rejected fixtures command, successful curl request, or empty output does not satisfy this goal.
-
-Report the exact execution command, runtime identity, input/output paths, processed counts, exit code, and any remaining errors. Never expose credentials or claim success without inspecting the output. If an external dependency prevents progress, state the specific failed operation and the evidence.
+Inspect the actual workbook before reporting its contents.
