@@ -1,9 +1,10 @@
-Hey Aryan, could you review the latest branch and focus on these areas?
+Implement explicit configuration control for simulated test execution.
 
-* Run linting, type checks and static analysis; document all actionable findings.
-* Check dependencies for known vulnerabilities, deprecated packages and unsafe versions.
-* Review API input validation, exception handling, log sanitization and secret exposure risks.
-* Identify missing unit tests around security boundaries and critical error paths.
-* Flag dead/duplicated code and propose small, behavior-preserving refactors.
+* Simulation must be disabled by default in every environment, including DEV, SIT, PAT, and PROD.
+* Enable simulation only through an explicit boolean setting in the active environment configuration. Reuse an existing suitable setting; otherwise add simulation_enabled: false.
+* A missing setting means simulation is disabled. Reject invalid values with a clear configuration error.
+* CLI options, environment variables, fixtures, synthetic profiles, or fallback logic must not independently enable simulation.
+* When simulation is disabled, incomplete live configuration must stop execution with a clear error. Connection or authentication failures must never trigger simulation.
+* When explicitly enabled, clearly label logs and outputs as simulated.
 
-Please share your findings first—don’t change existing features, architecture, authentication, or push any code until we align.
+Review all execution paths, make the smallest necessary changes, and add focused tests covering explicit enablement, default disablement, and prevention of automatic fallback across all environments. Report changed files and actual test results. Do not modify CI/CD or unrelated business logic.
