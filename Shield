@@ -1,9 +1,47 @@
-Please show me the actual Excel output from the successful DEV run you reported.
+Extend the existing dev_live_e2e_run.sh into one repeatable script that creates a sample workbook, runs CLUE against real DEV providers, downloads the output, and verifies it against the previously inspected result. Implement and execute it using the existing supported SSH/NPID workflow.
 
-* Locate and open the generated workbook, and give me its exact path.
-* Make the workbook available for me to open or download.
-* Preview the first 10 rows of the result tab, including original source values, document IDs, front/back image paths, OCR fields, and confidence values.
-* Show the input row count, output row count, run timestamp, and exit code from the corresponding logs.
-* Clearly identify which run produced this workbook. If the newly prepared LIVE_CREDIT_PROVEN.xlsx run has not executed yet, say so and show the previous successful run’s output.
+Keep the implementation small. Reuse the installed application, runtime-secrets wrapper, and existing configuration loader.
 
-Inspect the actual workbook before reporting its contents.
+Required flow:
+
+1. Build the sample input
+
+* Reuse the four previously identified valid credit rows from the archived source workbook.
+* Preserve their actual source values, column order, and required workbook structure.
+* Do not invent account numbers, dates, or cheque identifiers.
+* Before running, freeze a separate comparison baseline from the corresponding rows in the previous output and its manifest.
+
+2. Execute a fresh DEV run
+
+* Use the runtime NPID and existing secrets-loading mechanism.
+* Keep simulation disabled and use real Symcor/Tungsten endpoints.
+* Create a unique run directory and capture the actual application exit code, logs, manifest, and output paths.
+* Establish whether fresh provider calls occurred. Identify any cached or reused results explicitly.
+* Do not substitute the previous workbook for the new output.
+
+3. Verify the generated workbook
+
+* Check that original sheets and source values are preserved.
+* Validate the result sheet against the current documented 41-column contract.
+* Verify actual front/back images embedded at columns X/Y. Empty text cells are acceptable when the required images are correctly embedded.
+* Check OCR field/confidence pairs and reconcile source, matched, unmatched, invalid, and output counts.
+* Investigate the previous manifest count of 60 versus 59 result rows using the actual metric definitions.
+
+4. Compare with the baseline
+
+* Compare only the selected source cases and their associated results.
+* Use stable source/document identifiers from the workbook and manifest; preserve duplicate multiplicity.
+* Compare document sets, source values, OCR fields, and confidence values. Show missing, additional, or changed results.
+* Ignore row ordering, timestamps, run IDs, job IDs, and workbook ZIP metadata.
+* Do not rewrite expectations to make the comparison pass.
+* Preserve the existing provisional OCR and unverified association labels; a regression match does not establish business correctness.
+
+5. Download and present the evidence
+
+* Download the newly generated workbook, report, and safe logs to my workstation.
+* Verify the downloaded workbook checksum against the server copy.
+* Open the workbook and show a short result preview.
+* Report execution, workbook validation, and baseline comparison separately as PASS, FAIL, or UNKNOWN, with concrete differences.
+* Return a nonzero script exit code for application failure or failed mandatory checks.
+
+Deliver the script, one exact command to use it again, the new downloadable workbook, and the verification report. Record the repository, branch, and commit. Keep CI/CD and release work out of scope.
