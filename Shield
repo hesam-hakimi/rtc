@@ -1,19 +1,53 @@
-Continue from the completed CLUE DEV audit and implement the reconciliation. Complete the work rather than stopping at a proposed plan.
+Continue the active CLUE task. Complete the bounded transfer repair and E2E runner refresh described below.
 
 Repository: TD-Universe/W001CLUEinitialRepo
+Worktree: clue-rc-20260926
 Branch: release-candidate/clue-app-clue-20260926
+Last audited HEAD: 7fc0ee3 — verify current native state before acting.
 
-Recheck current HEAD, working-tree changes and installed files before editing. Preserve unrelated and concurrent work.
+The final audit reports that the installed E2E runner is stale, still contains temporary-path fallbacks, and has an 8-byte encoding corruption in a comment. The corruption came from sync_to_dev.ps1 capturing Git output as PowerShell strings. Previous self-consistent transfer hashes did not prove equality with canonical Git bytes.
 
-1. Refresh the protected E2E runner and required helpers from committed canonical source using the existing installer. Verify installed hashes and prove a dry run succeeds with temporary staging unavailable and without relying on CLUE_E2E_HELPER pointing into /tmp. Remove only temporary files belonging to this task.
-2. Reconcile the five differing application files: batch.py, envsettings.py, clue_dev_bootstrap.sh, clue_install_release.sh and clue_preinstall_check.sh. Compare installed content against both committed source and the working tree. Establish the intended source version, preserve required working fixes, and selectively commit reviewed changes. Do not stage all modified files or silently include unrelated SIGTERM work; verify relevant shutdown/restart behavior if those changes are included.
-3. Give the server-only AutoSys configuration a tracked, parameterized template using existing repository conventions. Keep actual environment values and secrets outside Git. Preserve active_environment and existing runtime configuration.
-4. Run checks appropriate to the selected changes. Build one DEV test package from the committed Deliverables/ source using existing tooling. Record its source commit and full SHA-256. Install through the existing deployment procedure, preserving runtime configuration, state and business data.
-5. Repeat the source-to-server audit. Report exact byte matches separately from documented LF/CRLF conversion. Confirm that unexplained executable differences are resolved and installed files are attributable to the selected source.
-6. Run the existing small real DEV CREDIT scenario after deployment. Capture actual exit codes, the new workbook, checksum, workbook verification and frozen-baseline comparison. Report execution, workbook validation and comparison outcomes separately.
+This instruction authorizes repairing the transfer helper, refreshing the three existing E2E runtime files on DEV through the existing installer, and performing an offline reuse check. Complete these steps without another routine confirmation.
 
-Keep /app/clue and python -m clue.batch unchanged. Do not modify CI/CD, pom.xml, assembly.xml or Salt-formula, or introduce another application structure.
+1. Establish the current source
+    Read applicable repository guidance and the existing .github/skills/clue-dev-sample-xlsx-run/SKILL.md. Inspect Git status and resolve the actual tracked paths for sync_to_dev.ps1, install_dev_e2e_launcher.sh, the launcher, Python helper and runner. Preserve all unrelated staged, modified and untracked work. Record the selected source commit/blob identities.
+2. Repair byte fidelity
+    Fix sync_to_dev.ps1 using binary-safe file or process streams. Do not capture Git blobs as PowerShell text strings or use PowerShell 5.1 text redirection to reconstruct them.
 
-Use existing authorized access. If a privileged step is genuinely denied, complete independent work and provide the exact denied command, exit code and smallest required administrative action.
+Where Linux scripts require CRLF-to-LF conversion, make that conversion explicit and preserve every other byte. Compare transferred bytes against an independently obtained canonical Git blob, allowing only that declared conversion.
 
-Update the existing tracked skill documentation. Finish with source commits, artifact identity, installed hashes, remaining differences, test evidence and remote push status.
+Add focused regression coverage for non-ASCII UTF-8 characters, including U+00B7, and LF/CRLF inputs. Demonstrate that the earlier encoding corruption is detected. Run the relevant existing checks.
+
+3. Refresh only these installed files
+    Use the existing installer to refresh:
+
+* /usr/local/sbin/clue-dev-e2e
+* /usr/local/lib/clue/dev_e2e_verify.py
+* /usr/local/lib/clue/dev_live_e2e_verify.sh
+
+Verify the current operator/runtime identities; the audited values were tag5916 and tclue999devs. Preserve the existing ownership, modes and command-scoped authorization. Inspect any installer policy changes before execution and keep their effective permissions unchanged.
+
+4. Verify the installation independently
+    Read back the installed files and compare full SHA-256 values with the selected canonical source bytes, accounting explicitly for permitted line-ending conversion.
+
+Confirm that the installed runner contains the persistent CLUE_E2E_ROOT behavior, –dry-run support and checksums.sha256 generation, and has no fallback to the old temporary helper.
+
+5. Prove reuse without temporary staging
+    Temporarily make only this task’s staging directory and obsolete temporary helper unavailable. Preserve them for restoration; do not clear /tmp globally.
+
+Invoke the installed runner with –dry-run as the runtime NPID through the existing authorized administrative path. First inspect the dry-run implementation to confirm that it makes no Symcor, Tungsten or Pillar requests.
+
+Capture the actual command, exit code and resolved installed paths. Restore temporarily moved files afterward. Do not execute the argument-free launcher if it would start a live provider run.
+
+6. Finish with evidence
+    Report:
+
+* source commit/blob identities and the bounded local diff;
+* actual regression-check results;
+* the three installed paths, owners, modes and full expected/observed hashes;
+* staging-unavailable dry-run output and exit code;
+* any remaining blocker.
+
+Keep /app/clue application files, environment configuration, AutoSys files, secrets, business data and existing run evidence unchanged. Do not build a new artifact, commit, push, merge, change CI/CD/POM/Assembly/Salt, or start a live E2E run.
+
+If an administrative action cannot be executed with available access, give the exact missing action and sanitized command, and mark installation/validation pending. Claim completion only after installed-file comparison and the staging-unavailable rehearsal actually succeed.
