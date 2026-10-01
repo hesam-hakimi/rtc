@@ -1,56 +1,71 @@
-CLUE installer — initial Production-readiness assessment
+Assess whether PR #30 can be integrated into my branch without losing existing work or introducing regressions. Perform the review and isolated verification now; do not merge or publish anything.
 
-Review the current CLUE installer and provide an evidence-based initial assessment. Keep the scope focused on installation, configuration, runtime-secret setup and operational handoff. This task authorizes assessment and isolated verification only. Write the report in English.
+Repository: TD-Universe/W001CLUEInitialRepo
+PR: https://github.com/TD-Universe/W001CLUEInitialRepo/pull/30
+Expected source: feature/symcor-tungsten-output-20260928
+Expected target / branch to protect: release-candidate/clue-app-clue-20260926
 
-1. Establish the exact candidate
+Verify these names against current PR metadata and repository state. The screenshot shows merge conflicts; determine the current status from fresh evidence.
 
-Read AGENTS.md, applicable repository instructions, current deployment documentation and available CLUE references, starting with 00_START_HERE.md and 01_CURRENT_STATE.json.
+1. Protect the existing workspace.
 
-Record repository, branch, full HEAD, working-tree changes and remote synchronization status. Identify the supported installer entry point and every script it invokes. Inspect Deliverables/deploy/clue_install_release.sh and clue_with_runtime_secrets.sh if present; discover their current locations rather than assuming an old layout. Trace any separate installer/tooling repository.
+* Record the current branch, HEAD, and working-tree status before starting.
+* Do not switch branches, stash, reset, clean, rebase, or edit files in my existing workspace.
+* Use separate temporary worktrees for review, merge simulation, and tests.
+* Do not push, approve the PR, perform an actual PR merge, deploy, or call live Symcor/Tungsten services.
+* Work sequentially with one agent.
 
-Identify the candidate archive, version, SHA-256 and source provenance. Compare its installer/configuration payload with current source and, if an already-authorized host connection exists, the installed copies. Separate generated files, environment-specific configuration and secrets from code differences. Never print secret contents.
+2. Establish exactly what is being reviewed.
 
-Treat old reports and screenshots as historical evidence. Missing artifact or host access must be reported explicitly; continue the source review.
+* Read applicable AGENTS.md instructions and the latest relevant project documentation.
+* Fetch the necessary refs safely and record the PR head SHA, latest target SHA, local owner-branch SHA, and relevant merge bases.
+* Identify local commits absent from the remote target. If the local owner branch differs from the remote target, assess both integration scenarios separately.
+* Inspect uncommitted changes for overlap without modifying them. State clearly that they are outside any commit-based test result.
+* If remote information is unavailable, continue with available evidence and identify what could not be verified.
 
-2. Review the complete operator flow
+3. Review overlap and semantic conflicts.
+    Compare each side’s changes from its relevant merge base, distinguishing shared history from independently introduced changes.
 
-Trace download or local-package selection, verification, extraction, preflight, installation, environment selection, secrets, validation, activation, repeat installation, upgrade and rollback.
+Identify:
 
-Check:
+* Files and functions changed by both sides.
+* Duplicate implementations, incompatible interfaces, and changes that could overwrite or undo existing fixes.
+* Conflicts between code, configuration, installation instructions, and tests.
+* Whether the PR’s actual scope matches its description. Do not assume it is tests-only.
+* Tests that weaken assertions, introduce excessive mocking, hide failures, or silently enable simulation.
 
-* An accurate, simple runbook that works from a clean supported Linux host without a source checkout or temporary development helpers.
-* Correct Nexus location and version pinning, TLS verification, mandatory trusted SHA-256 verification before extraction, and protection against unsafe archive paths and links.
-* Supported OS/Python/dependency prerequisites and clear failures before changing the existing installation.
-* Installer identity versus runtime NPID, /app/clue ownership and permissions, narrowly scoped privileged steps, and no hard-coded DEV identity in higher environments.
-* Environment/profile selection and persisted install path: trace the actual marker/configuration loader through runtime. Resolve the supported environment list from current evidence. Simulation must be disabled by default and prohibited on server environments; local/laptop simulation requires explicit configuration. Missing or invalid configuration must fail clearly.
-* Runtime secrets: inspect the current Salt/Pillar/Vault or approved fallback contract, exact sudo permissions, certificate/key validation, protected temporary files and cleanup, redacted logging, and prompt-free scheduler execution. Verify that encrypted or invalid keys cannot hang waiting for terminal input. Do not display real secrets.
-* Atomic activation or an equivalent demonstrated recovery mechanism, installer locking, preservation of configuration/data, safe repeat runs, interruption handling and usable rollback.
-* The exact AutoSys command, account, working directory, environment and exit-code contract. Keep status verification, intentional batch execution and recovery-only rollback clearly distinguished in the runbook.
+Inspect affected CLUE behavior, including installer/runtime configuration, environment selection, secrets loading, simulator controls, Symcor/Tungsten processing, output workbook preservation, invalid-record handling, logging, and retry behavior. Review unchanged callers where shared interfaces are affected.
 
-Recheck six historical findings against current code: unconfirmed Production identity, unresolved AutoSys entry point, non-atomic replacement, missing installer lock, optional SHA-256 and unverified live-provider readiness.
+For each material overlap, explain both intentions, the combined effect, and the recommended resolution. Cite file paths, line numbers, and commits.
 
-Classify each as FIXED, STILL_PRESENT or UNVERIFIED with evidence. Do not assume an old finding remains open or has been resolved.
+4. Simulate the integration.
 
-3. Perform bounded verification
+* Attempt the merge using pinned SHAs only inside a temporary worktree.
+* Report the actual Git result and every conflicted file.
+* Never resolve conflicts by blindly choosing “ours” or “theirs.”
+* For unambiguous conflicts, you may construct and test a provisional resolution in the isolated worktree. Record its complete resolution diff.
+* Leave ambiguous conflicts unresolved and describe the decision needed.
+* Distinguish the original PR’s mergeability from the provisional candidate’s results.
 
-Run relevant shell syntax checks and existing installer/wrapper tests after checking their side effects. Use isolated temporary directories, fixtures and mocks for install/reinstall/failure/rollback checks where safely supported.
+5. Verify behavior.
 
-Do not change source, rebuild or publish artifacts, commit/push/merge, alter sudoers, mutate an existing installation, schedule jobs or call live providers. Do not launch other agents or concurrent installers against a shared host. Preserve unrelated work.
+* Use the repository’s documented checks and relevant regression tests.
+* Establish the target/owner baseline, then test the combined candidate under equivalent conditions.
+* Check for import, build, configuration, test-discovery, and runtime-contract failures.
+* Separate pre-existing failures from newly introduced failures.
+* Do not change application behavior or weaken tests merely to obtain a passing result.
+* If conflicts prevent combined testing, test the individual branches where useful, but do not present that as proof that integration is safe.
+* Report commands, exit codes, test counts, skipped checks, and limitations. Claim success only for checks actually executed.
 
-Record commands, results and skipped checks. Distinguish tests executed during this assessment from prior reported results.
+6. Return a concise evidence-based report.
+    Include:
 
-4. Deliver a concise report
+* Reviewed repository, branches, and exact SHAs.
+* Mechanical merge result: CLEAN or CONFLICTED.
+* An overlap table: file/function | my change | PR change | combined risk | recommended action.
+* Baseline versus combined-candidate verification results.
+* Any provisional resolution diff.
+* Conclusion: SAFE WITHIN TESTED SCOPE, NEEDS CHANGES, or INSUFFICIENT EVIDENCE.
+* Exact next actions needed before merging.
 
-Lead with an installer-only verdict:
-
-READY_FOR_PRODUCTION / NOT_READY / INSUFFICIENT_EVIDENCE
-
-Explain the verdict and identify the exact candidate assessed. Keep local checks, target-host evidence, live-provider results and SIT/business acceptance separate. A successful DEV run or passing unit tests alone cannot establish overall Production readiness.
-
-Provide a table:
-
-Area | PASS/FAIL/UNVERIFIED | Evidence | Practical impact | Smallest next action
-
-List genuine blockers first. Distinguish code defects from missing operational inputs or evidence. Propose at most five prioritized next actions, without unrelated redesign or additional release frameworks.
-
-Save the report in the existing project assessment/documentation location, then stop before implementation.
+A clean Git merge alone does not establish behavioral safety. Scope the conclusion to the reviewed SHAs and executed checks, and confirm that my original branch, HEAD, and working-tree contents remain unchanged.
