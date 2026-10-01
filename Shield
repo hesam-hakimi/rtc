@@ -1,33 +1,14 @@
-Continue your existing Tungsten implementation session. Investigate the following concerns in your implementation and return evidence and focused test results.
+Continue the regression review with bounded implementation and test repairs.
 
-Verify the actual current source, including uncommitted changes. Treat your previous report as a claim to verify, not proof of correctness.
+The current owner requirement is explicit: simulation can be enabled through configuration and defaults to disabled in every environment. Permanent removal of simulation is not the intended final behavior.
 
-1. Retry safety for 429/5xx
+Verify the latest working-tree changes before editing and preserve unrelated work. This session owns the following repairs.
 
-Trace the complete job-submission path, including application retries and automatic transport retries.
+1. Complete the existing simulation_enabled setting under run through the configuration schema, defaults, validation and provider construction. Merely accepting the YAML key is insufficient. Missing or false must keep simulation disabled; explicit true must enable the intended offline path. Provider failures must never automatically activate simulation.
+2. Migrate the legacy simulation tests to isolated configuration that explicitly enables simulation. Preserve their behavioral assertions and offline coverage. Tests verifying default-disabled behavior must use missing/false configuration. Do not delete, skip or quarantine these tests merely to obtain green results.
+3. Implement the missing simulation_environment_config test helper consistently with the completed configuration behavior. Verify that test_live_execution_guard.py collects and its tests execute.
+4. Restore the required workspace argument in the affected queue-scheduler test. Check its subsequent behavior as well; removing the first failure may reveal the simulation-related failure underneath.
 
-Your report says 429/5xx can trigger RETRY_SAME_ENDPOINT while provider idempotency remains unknown. Determine what evidence makes another job-creation POST safe. Reusing the same endpoint does not itself prevent duplicate jobs.
+Run the affected groups after each coherent repair, then run the complete suite once on the final source. Report actual results, remaining failures and skip reasons.
 
-Use a fake provider that accepts a job but returns a 502/503 response. Exercise the actual client path and report the number of submitted requests and resulting disposition. Inspect 429 separately; identify any documented evidence that the request was rejected before acceptance.
-
-2. UNKNOWN_OUTCOME across restart/resume
-
-Test ambiguous submission outcomes using the actual durable attempt/page state:
-
-* Provider acceptance followed by a read timeout.
-* Connection loss after possible submission.
-* A crash after provider acceptance but before local result commit.
-
-Restart with fresh application/client objects using the persisted state. Verify whether resume submits another job or preserves the unresolved outcome. A test reusing a successfully committed page is insufficient for these cases.
-
-3. Simulation-related failures
-
-Use the saved full-suite report at $env:TEMP\clue_full_suite.txt to identify relevant failures.
-
-Investigate run.simulation.enabled, RUN_KEYS/schema handling and tests expecting –provider-mode simulator. Determine the minimal coherent correction against the approved requirement: simulation is enabled only through configuration and defaults to disabled in every environment.
-
-Do not enable simulation globally, restore a CLI bypass, or merely accept a configuration key that has no implemented behavior.
-
-Keep application/configuration source unchanged during this investigation. Use existing tests or isolated temporary reproductions, fake transports and separate cache/temp paths. Do not rerun the full suite or call live providers.
-
-For each concern, report the source path, expected versus observed behavior, exact test results, whether a defect is confirmed or unresolved, and the proposed minimal fix. Clearly separate newly reproduced evidence from earlier reported results.
+Keep Tungsten retry/resume changes outside this repair. Do not modify CI/CD, POM, Assembly or Salt; do not build, deploy, push or call live providers.
