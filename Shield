@@ -1,1 +1,7 @@
+The launcher is now installed, and the sudoers operator has been set to tag5916. Verify the effective permission from your own session, then execute:
 
+sudo -n -u tclue999devs /usr/local/sbin/clue-dev-e2e
+
+Continue through the real DEV run, download the new workbook, and report its observed exit code and validation results.
+
+Fix the tracked installer/template workflow to require the operator account and reject unresolved OPERATOR placeholders before installation. Preserve the existing application layout and keep all reusable fixes in the canonical repository source.
