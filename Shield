@@ -1,50 +1,56 @@
-Continue the existing Tungsten implementation session. Implement both confirmed duplicate-submission fixes from your latest investigation, including the existing outer retry path. Use the current working tree and preserve unrelated concurrent changes.
+CLUE installer — initial Production-readiness assessment
 
-The required behavior is: never repeat a job-creation POST when the earlier request may have created a job. Retrying the same endpoint does not establish safety.
+Review the current CLUE installer and provide an evidence-based initial assessment. Keep the scope focused on installation, configuration, runtime-secret setup and operational handoff. This task authorizes assessment and isolated verification only. Write the report in English.
 
-1. Repair both retry layers
+1. Establish the exact candidate
 
-Trace and fix the complete path through TungstenComponentClient, tungsten_stage, control.RetryPolicy and retrieval.RetryRule.
+Read AGENTS.md, applicable repository instructions, current deployment documentation and available CLUE references, starting with 00_START_HERE.md and 01_CURRENT_STATE.json.
 
-Without authoritative evidence of non-acceptance or supported idempotency, treat job-creation responses 429/500/502/503—and other ambiguous server errors—as UNKNOWN_OUTCOME. Persist the held state. Neither the client nor the outer application policy may resubmit that page to either endpoint.
+Record repository, branch, full HEAD, working-tree changes and remote synchronization status. Identify the supported installer entry point and every script it invokes. Inspect Deliverables/deploy/clue_install_release.sh and clue_with_runtime_secrets.sh if present; discover their current locations rather than assuming an old layout. Trace any separate installer/tooling repository.
 
-Apply this protection with failover both enabled and disabled. Removing only RETRY_SAME_ENDPOINT from the client is insufficient.
+Identify the candidate archive, version, SHA-256 and source provenance. Compare its installer/configuration payload with current source and, if an already-authorized host connection exists, the installed copies. Separate generated files, environment-specific configuration and secrets from code differences. Never print secret contents.
 
-Permit backup submission only when failure is demonstrably before submission, such as an appropriately classified DNS failure, connection refusal or connection timeout. Generic ConnectionError or response status alone is insufficient evidence.
+Treat old reports and screenshots as historical evidence. Missing artifact or host access must be reported explicitly; continue the source review.
 
-Ensure backup_on_server_error cannot bypass this protection. Handle any existing incompatible configuration explicitly and document the behavior change.
+2. Review the complete operator flow
 
-Preserve Retry-After metadata, but honor it for automatic retry only where repeat submission is proven safe. Do not let its presence convert an ambiguous outcome into a retryable one.
+Trace download or local-package selection, verification, extraction, preflight, installation, environment selection, secrets, validation, activation, repeat installation, upgrade and rollback.
 
-2. Close the restart/crash recovery gap
+Check:
 
-In control._extract, before creating a fresh attempt or sending another POST, inspect existing unresolved attempts using the durable store.
+* An accurate, simple runbook that works from a clean supported Linux host without a source checkout or temporary development helpers.
+* Correct Nexus location and version pinning, TLS verification, mandatory trusted SHA-256 verification before extraction, and protection against unsafe archive paths and links.
+* Supported OS/Python/dependency prerequisites and clear failures before changing the existing installation.
+* Installer identity versus runtime NPID, /app/clue ownership and permissions, narrowly scoped privileged steps, and no hard-coded DEV identity in higher environments.
+* Environment/profile selection and persisted install path: trace the actual marker/configuration loader through runtime. Resolve the supported environment list from current evidence. Simulation must be disabled by default and prohibited on server environments; local/laptop simulation requires explicit configuration. Missing or invalid configuration must fail clearly.
+* Runtime secrets: inspect the current Salt/Pillar/Vault or approved fallback contract, exact sudo permissions, certificate/key validation, protected temporary files and cleanup, redacted logging, and prompt-free scheduler execution. Verify that encrypted or invalid keys cannot hang waiting for terminal input. Do not display real secrets.
+* Atomic activation or an equivalent demonstrated recovery mechanism, installer locking, preservation of configuration/data, safe repeat runs, interruption handling and usable rollback.
+* The exact AutoSys command, account, working directory, environment and exit-code contract. Keep status verification, intentional batch execution and recovery-only rollback clearly distinguished in the runbook.
 
-Under the existing item ownership and transaction rules, an unfinished previous tungsten_extract attempt must prevent resubmission and produce HELD_UNKNOWN_OUTCOME. Persist attempt evidence before outbound submission.
+Recheck six historical findings against current code: unconfirmed Production identity, unresolved AutoSys entry point, non-atomic replacement, missing installer lock, optional SHA-256 and unverified live-provider readiness.
 
-Cover the crash after HTTP 200 but before page-result commit. If a crash occurred before the POST and non-submission cannot be established durably, hold conservatively.
+Classify each as FIXED, STILL_PRESENT or UNVERIFIED with evidence. Do not assume an old finding remains open or has been resolved.
 
-Preserve successful page-result reuse, front/back association and operator-visible evidence. Do not automatically clear unresolved attempts, mark held items complete, or release them for retry on restart. Correct the misleading TERMINAL_ITEM_STATES comment without introducing unsafe lifecycle behavior.
+3. Perform bounded verification
 
-3. Add meaningful offline regression tests
+Run relevant shell syntax checks and existing installer/wrapper tests after checking their side effects. Use isolated temporary directories, fixtures and mocks for install/reinstall/failure/rollback checks where safely supported.
 
-First reproduce the unsafe behavior with a fake transport that creates a job before returning an error; then demonstrate the fixes.
+Do not change source, rebuild or publish artifacts, commit/push/merge, alter sudoers, mutate an existing installation, schedule jobs or call live providers. Do not launch other agents or concurrent installers against a shared host. Preserve unrelated work.
 
-Assert actual POST/job counts through the full application and persisted SQLite state:
+Record commands, results and skipped checks. Distinguish tests executed during this assessment from prior reported results.
 
-* 429/500/502/503, failover off and on: one job; held outcome; fresh-object restart/resume sends no additional POST.
-* Crash after acceptance/200 before result commit: restart sends no additional POST.
-* Crash after durable attempt creation before submission: conservative hold when non-submission cannot be proven.
-* Read timeout and in-flight connection loss remain held across restart.
-* Proven pre-submission primary failure still permits backup; healthy primary makes no backup call.
-* Committed page results remain reusable without resubmission.
+4. Deliver a concise report
 
-Keep per-endpoint credentials, authentication-error handling and existing simulation policy intact. Do not invent idempotency headers or a job-status API.
+Lead with an installer-only verdict:
 
-4. Verify and report
+READY_FOR_PRODUCTION / NOT_READY / INSUFFICIENT_EVIDENCE
 
-Run focused tests and affected integration/recovery suites first. Run the full offline suite once after the final changes. Record the exact source state tested; invalidate affected results if overlapping files change during verification.
+Explain the verdict and identify the exact candidate assessed. Keep local checks, target-host evidence, live-provider results and SIT/business acceptance separate. A successful DEV run or passing unit tests alone cannot establish overall Production readiness.
 
-Report changed files, actual test results, POST/job counts, and the operational implications of held outcomes.
+Provide a table:
 
-Do not build, deploy, commit, push, contact live providers, expose secrets, or change simulation configuration, CI/CD, POM, Assembly or Salt.
+Area | PASS/FAIL/UNVERIFIED | Evidence | Practical impact | Smallest next action
+
+List genuine blockers first. Distinguish code defects from missing operational inputs or evidence. Propose at most five prioritized next actions, without unrelated redesign or additional release frameworks.
+
+Save the report in the existing project assessment/documentation location, then stop before implementation.
