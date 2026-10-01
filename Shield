@@ -1,14 +1,50 @@
-Continue the regression review with bounded implementation and test repairs.
+Continue the existing Tungsten implementation session. Implement both confirmed duplicate-submission fixes from your latest investigation, including the existing outer retry path. Use the current working tree and preserve unrelated concurrent changes.
 
-The current owner requirement is explicit: simulation can be enabled through configuration and defaults to disabled in every environment. Permanent removal of simulation is not the intended final behavior.
+The required behavior is: never repeat a job-creation POST when the earlier request may have created a job. Retrying the same endpoint does not establish safety.
 
-Verify the latest working-tree changes before editing and preserve unrelated work. This session owns the following repairs.
+1. Repair both retry layers
 
-1. Complete the existing simulation_enabled setting under run through the configuration schema, defaults, validation and provider construction. Merely accepting the YAML key is insufficient. Missing or false must keep simulation disabled; explicit true must enable the intended offline path. Provider failures must never automatically activate simulation.
-2. Migrate the legacy simulation tests to isolated configuration that explicitly enables simulation. Preserve their behavioral assertions and offline coverage. Tests verifying default-disabled behavior must use missing/false configuration. Do not delete, skip or quarantine these tests merely to obtain green results.
-3. Implement the missing simulation_environment_config test helper consistently with the completed configuration behavior. Verify that test_live_execution_guard.py collects and its tests execute.
-4. Restore the required workspace argument in the affected queue-scheduler test. Check its subsequent behavior as well; removing the first failure may reveal the simulation-related failure underneath.
+Trace and fix the complete path through TungstenComponentClient, tungsten_stage, control.RetryPolicy and retrieval.RetryRule.
 
-Run the affected groups after each coherent repair, then run the complete suite once on the final source. Report actual results, remaining failures and skip reasons.
+Without authoritative evidence of non-acceptance or supported idempotency, treat job-creation responses 429/500/502/503—and other ambiguous server errors—as UNKNOWN_OUTCOME. Persist the held state. Neither the client nor the outer application policy may resubmit that page to either endpoint.
 
-Keep Tungsten retry/resume changes outside this repair. Do not modify CI/CD, POM, Assembly or Salt; do not build, deploy, push or call live providers.
+Apply this protection with failover both enabled and disabled. Removing only RETRY_SAME_ENDPOINT from the client is insufficient.
+
+Permit backup submission only when failure is demonstrably before submission, such as an appropriately classified DNS failure, connection refusal or connection timeout. Generic ConnectionError or response status alone is insufficient evidence.
+
+Ensure backup_on_server_error cannot bypass this protection. Handle any existing incompatible configuration explicitly and document the behavior change.
+
+Preserve Retry-After metadata, but honor it for automatic retry only where repeat submission is proven safe. Do not let its presence convert an ambiguous outcome into a retryable one.
+
+2. Close the restart/crash recovery gap
+
+In control._extract, before creating a fresh attempt or sending another POST, inspect existing unresolved attempts using the durable store.
+
+Under the existing item ownership and transaction rules, an unfinished previous tungsten_extract attempt must prevent resubmission and produce HELD_UNKNOWN_OUTCOME. Persist attempt evidence before outbound submission.
+
+Cover the crash after HTTP 200 but before page-result commit. If a crash occurred before the POST and non-submission cannot be established durably, hold conservatively.
+
+Preserve successful page-result reuse, front/back association and operator-visible evidence. Do not automatically clear unresolved attempts, mark held items complete, or release them for retry on restart. Correct the misleading TERMINAL_ITEM_STATES comment without introducing unsafe lifecycle behavior.
+
+3. Add meaningful offline regression tests
+
+First reproduce the unsafe behavior with a fake transport that creates a job before returning an error; then demonstrate the fixes.
+
+Assert actual POST/job counts through the full application and persisted SQLite state:
+
+* 429/500/502/503, failover off and on: one job; held outcome; fresh-object restart/resume sends no additional POST.
+* Crash after acceptance/200 before result commit: restart sends no additional POST.
+* Crash after durable attempt creation before submission: conservative hold when non-submission cannot be proven.
+* Read timeout and in-flight connection loss remain held across restart.
+* Proven pre-submission primary failure still permits backup; healthy primary makes no backup call.
+* Committed page results remain reusable without resubmission.
+
+Keep per-endpoint credentials, authentication-error handling and existing simulation policy intact. Do not invent idempotency headers or a job-status API.
+
+4. Verify and report
+
+Run focused tests and affected integration/recovery suites first. Run the full offline suite once after the final changes. Record the exact source state tested; invalidate affected results if overlapping files change during verification.
+
+Report changed files, actual test results, POST/job counts, and the operational implications of held outcomes.
+
+Do not build, deploy, commit, push, contact live providers, expose secrets, or change simulation configuration, CI/CD, POM, Assembly or Salt.
