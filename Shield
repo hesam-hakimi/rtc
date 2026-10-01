@@ -1,13 +1,33 @@
-Perform a read-only regression review of the current CLUE working tree.
+Continue your existing Tungsten implementation session. Investigate the following concerns in your implementation and return evidence and focused test results.
 
-Another session is already reviewing the implementation. Do not edit application code, configuration or tests.
+Verify the actual current source, including uncommitted changes. Treat your previous report as a claim to verify, not proof of correctness.
 
-Verify the current branch, HEAD and working-tree changes, including modified and untracked files. Read the applicable repository instructions and current requirements.
+1. Retry safety for 429/5xx
 
-Start with the existing report at $env:TEMP\clue_full_suite.txt. The latest result shows 97 failed tests and 1 error.
+Trace the complete job-submission path, including application retries and automatic transport retries.
 
-Group failures by shared root cause. Inspect the affected code, fixtures and assertions. Distinguish application regressions, outdated test expectations, environment problems and test-isolation issues. Investigate overlapping changes without assuming parallel sessions caused every failure.
+Your report says 429/5xx can trigger RETRY_SAME_ENDPOINT while provider idempotency remains unknown. Determine what evidence makes another job-creation POST safe. Reusing the same endpoint does not itself prevent duplicate jobs.
 
-Do not rerun the full suite. If necessary, reproduce only specific failed tests using isolated temporary and cache paths.
+Use a fake provider that accepts a job but returns a 502/503 response. Exercise the actual client path and report the number of submitted requests and resulting disposition. Inspect 429 separately; identify any documented evidence that the request was rejected before acceptance.
 
-Return an evidence-based report with confirmed findings, unresolved questions, affected files and minimal proposed fixes in priority order. Do not change source files or call live providers.
+2. UNKNOWN_OUTCOME across restart/resume
+
+Test ambiguous submission outcomes using the actual durable attempt/page state:
+
+* Provider acceptance followed by a read timeout.
+* Connection loss after possible submission.
+* A crash after provider acceptance but before local result commit.
+
+Restart with fresh application/client objects using the persisted state. Verify whether resume submits another job or preserves the unresolved outcome. A test reusing a successfully committed page is insufficient for these cases.
+
+3. Simulation-related failures
+
+Use the saved full-suite report at $env:TEMP\clue_full_suite.txt to identify relevant failures.
+
+Investigate run.simulation.enabled, RUN_KEYS/schema handling and tests expecting –provider-mode simulator. Determine the minimal coherent correction against the approved requirement: simulation is enabled only through configuration and defaults to disabled in every environment.
+
+Do not enable simulation globally, restore a CLI bypass, or merely accept a configuration key that has no implemented behavior.
+
+Keep application/configuration source unchanged during this investigation. Use existing tests or isolated temporary reproductions, fake transports and separate cache/temp paths. Do not rerun the full suite or call live providers.
+
+For each concern, report the source path, expected versus observed behavior, exact test results, whether a defect is confirmed or unresolved, and the proposed minimal fix. Clearly separate newly reproduced evidence from earlier reported results.
