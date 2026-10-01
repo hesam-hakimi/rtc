@@ -1,15 +1,19 @@
-Continue and complete the CLUE source-to-server audit using actual repository files and live DEV file reads. Reuse the existing investigation.
+Continue from the completed CLUE DEV audit and implement the reconciliation. Complete the work rather than stopping at a proposed plan.
 
-Compare:
+Repository: TD-Universe/W001CLUEinitialRepo
+Branch: release-candidate/clue-app-clue-20260926
 
-* /app/clue against its mapped Deliverables sources.
-* /usr/local/sbin/clue-dev-e2e and /usr/local/lib/clue/ against the tracked skill scripts.
-* Installed configuration against repository configuration, identifying expected environment differences separately.
+Recheck current HEAD, working-tree changes and installed files before editing. Preserve unrelated and concurrent work.
 
-Specifically determine whether the installed runner has been updated to the source containing the temporary-path fixes.
+1. Refresh the protected E2E runner and required helpers from committed canonical source using the existing installer. Verify installed hashes and prove a dry run succeeds with temporary staging unavailable and without relying on CLUE_E2E_HELPER pointing into /tmp. Remove only temporary files belonging to this task.
+2. Reconcile the five differing application files: batch.py, envsettings.py, clue_dev_bootstrap.sh, clue_install_release.sh and clue_preinstall_check.sh. Compare installed content against both committed source and the working tree. Establish the intended source version, preserve required working fixes, and selectively commit reviewed changes. Do not stage all modified files or silently include unrelated SIGTERM work; verify relevant shutdown/restart behavior if those changes are included.
+3. Give the server-only AutoSys configuration a tracked, parameterized template using existing repository conventions. Keep actual environment values and secrets outside Git. Preserve active_environment and existing runtime configuration.
+4. Run checks appropriate to the selected changes. Build one DEV test package from the committed Deliverables/ source using existing tooling. Record its source commit and full SHA-256. Install through the existing deployment procedure, preserving runtime configuration, state and business data.
+5. Repeat the source-to-server audit. Report exact byte matches separately from documented LF/CRLF conversion. Confirm that unexplained executable differences are resolved and installed files are attributable to the selected source.
+6. Run the existing small real DEV CREDIT scenario after deployment. Capture actual exit codes, the new workbook, checksum, workbook verification and frozen-baseline comparison. Report execution, workbook validation and comparison outcomes separately.
 
-Return measured MATCH, DIFFERENT or UNVERIFIED results with full file hashes, source commit, installed version and exact differences. Distinguish release-version differences, LF/CRLF differences, stale installed scripts and server-only changes without tracked source.
+Keep /app/clue and python -m clue.batch unchanged. Do not modify CI/CD, pom.xml, assembly.xml or Salt-formula, or introduce another application structure.
 
-Keep this audit read-only. For each mismatch, identify the smallest correction and its canonical source. Do not deploy the entire current working tree or overwrite environment-specific configuration.
+Use existing authorized access. If a privileged step is genuinely denied, complete independent work and provide the exact denied command, exit code and smallest required administrative action.
 
-Finish with a clear conclusion: which server files match, which differ, and what remains unverified. Do not claim completion based only on earlier screenshots or staging hashes.
+Update the existing tracked skill documentation. Finish with source commits, artifact identity, installed hashes, remaining differences, test evidence and remote push status.
