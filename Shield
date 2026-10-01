@@ -1,13 +1,15 @@
-Read and use the existing .github/skills/clue-dev-sample-xlsx-run/SKILL.md.
+Investigate how the previous CREDIT/DEBIT run actually executed successfully, while the current run stops at the NPID preflight check.
 
-Reuse the scripts already implemented:
+Inspect the previous run’s available logs, scripts, and repository diffs. Compare:
 
-* dev_live_e2e_verify.sh
-* dev_e2e_verify.py
-* fetch_e2e_evidence.ps1
+* Host and effective runtime account.
+* Exact execution command and entry point.
+* Credential-loading mechanism, without exposing secret values.
+* Provider mode and evidence of real provider calls.
+* Run ID and observed exit code, if recorded.
 
-Update the existing skill only where necessary so it guides the complete workflow: build the sample from previously proven source rows, run against real DEV providers under the NPID, retrieve the new workbook, verify it, compare it with the frozen baseline, and open the output for me.
+Check whether the NPID-only preflight guard was introduced by the newly created verification script. Distinguish that script restriction from an actual operating-system permission failure.
 
-Keep the execution logic in the existing scripts. Avoid duplicate skills or replacement scripts.
+Explain whether you executed the previous run yourself or only downloaded an existing output. File ownership and COMPLETE metadata alone do not establish who executed it or its exit code.
 
-Show me the skill name and one short prompt I can use to repeat this workflow. Then continue the pending live run using this skill. Report success only after observing the new run’s exit code and inspecting its downloaded output.
+Show the evidence and the smallest change needed to reuse the previously working execution path. Mark anything you cannot verify as UNKNOWN.
