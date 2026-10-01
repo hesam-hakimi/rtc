@@ -1,14 +1,4 @@
-Reconcile the DEV files with the local repository before continuing the run.
-
-1. Identify the active local worktree, branch, and commit. Map every DEV application/script file modified during this session to its actual repository source.
-2. Compare their contents. Specifically check the NPID preflight correction, YAML CRLF handling, and pipefail/SIGPIPE fix.
-3. Port any DEV-only code fixes into the correct existing local source files. Preserve unrelated local changes. Keep credentials, runtime state, logs, and generated workbooks outside Git.
-4. Regenerate the staged DEV scripts from the reconciled repository sources. Verify matching SHA-256 hashes rather than maintaining separate edited copies.
-5. Run the relevant syntax checks and tests, and commit only the reconciled changes belonging to this task.
-
-Show a table containing:
-DEV path | Repository source path | Differences resolved | Hash match | Git status
-
-Distinguish application code, test/skill scripts, and environment-specific runtime configuration. Report any remaining DEV-only change explicitly.
-
-Then continue the pending DEV execution using the reconciled scripts. Keep CI/CD and release configuration out of scope.
+visudo -f /etc/sudoers.d/clue-runtime-secrets
+tclue999devs ALL=(root) NOPASSWD: /usr/bin/salt-call pillar.get secrets\:tungsten_primarykey --out\=json
+visudo -c
+sudo -u tclue999devs -i /bin/bash /tmp/dev_live_e2e_verify.sh
