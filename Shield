@@ -2,3 +2,9 @@ visudo -f /etc/sudoers.d/clue-runtime-secrets
 tclue999devs ALL=(root) NOPASSWD: /usr/bin/salt-call pillar.get secrets\:tungsten_primarykey --out\=json
 visudo -c
 sudo -u tclue999devs -i /bin/bash /tmp/dev_live_e2e_verify.sh
+
+chown root:root /etc/sudoers.d/clue-dev-e2e /etc/sudoers.d/clue-runtime-secrets
+chmod 0440 /etc/sudoers.d/clue-dev-e2e /etc/sudoers.d/clue-runtime-secrets
+visudo -f /etc/sudoers.d/clue-runtime-secrets
+
+tclue999devs ALL=(root) NOPASSWD: /usr/bin/salt-call pillar.get secrets\:tungsten_secondarykey --out\=visudo -c && sudo -u tclue999devs -i /bin/bash /tmp/dev_live_e2e_verify.sh
