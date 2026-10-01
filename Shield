@@ -1,9 +1,14 @@
-Finish the current live run and preserve its evidence. Then make the existing CLUE DEV skill reusable tomorrow without relying on files left in /tmp.
+Continue the current CLUE task. Audit whether the code and reusable scripts on DEV match their canonical repository sources. Perform a read-only comparison first.
 
-Use the existing tracked scripts and installer. Verify that the installed launcher has no runtime dependency on /tmp staging files. Keep the reference workbook, manifest and baseline in an approved persistent data location. Preserve each run’s input, output, logs, observed exit code, checksums and verification report there. Keep business data and secrets outside Git.
+1. Inspect the actual repository, branch, HEAD and working-tree status. Identify the installed application release/version from available manifests. Distinguish committed source from uncommitted changes.
+2. Derive the mapping between repository Deliverables/ and /app/clue from the existing package and installer. Compare application code and deployment scripts file by file. Report missing files, extra executable files and content differences.
+3. Compare /usr/local/sbin/clue-dev-e2e and the payload under /usr/local/lib/clue/ against .github/skills/clue-dev-sample-xlsx-run/scripts/. Specifically verify whether the runner containing the temporary-path fixes has actually been installed.
+4. Use full SHA-256 hashes for exact byte comparisons. Classify LF/CRLF-only differences separately; do not silently normalize them and report exact equality.
+5. Review configuration separately: distinguish expected environment values from unexplained configuration or application behavior changes. Exclude generated workbooks, logs, state, caches and virtual-environment dependencies from source equality. Do not print secret values.
+6. Check for runtime dependencies on /tmp or temporary staging.
 
-Make every reusable script change in the canonical repository first, then synchronize installed copies through the existing installer. Preserve the /app/clue layout and application entry point.
+Return a reconciliation table with server path, repository path, source version, comparison result, difference and required action. Mark unreadable or unverified files explicitly.
 
-Validate reuse from a fresh session with temporary staging unavailable, using a dry run without starting another live provider job. Update SKILL.md with the exact rerun, evidence download and reinstall instructions.
+An older deployed release may differ from current HEAD. Explain that version difference and identify any server-only changes that lack a tracked source counterpart.
 
-Report the canonical paths, commit, remote backup/push status, and the single command needed for the next run.
+Do not modify the application, installed helpers, permissions or Git history during this audit. Finish with an evidence-based conclusion about what matches and what remains different.
