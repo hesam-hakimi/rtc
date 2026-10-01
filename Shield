@@ -1,1 +1,18 @@
 
+Continue the current CLUE DEV task and execute it yourself using the configured passwordless sudo access.
+
+Read .github/skills/clue-dev-sample-xlsx-run/SKILL.md and reuse its existing scripts.
+
+1. Check effective privileges from your actual remote session with sudo -n -l. Use the permitted command to run as tclue999devs. If the configured launcher exists and is authorized, execute:
+
+sudo -n -u tclue999devs /usr/local/sbin/clue-dev-e2e
+
+    Verify actual permissions rather than relying on previous identity checks.
+2. Resolve confirmed prerequisite failures using your existing authorized access. Read the runtime secrets wrapper to identify every required Salt command. Never print secret values or request my password.
+3. Execute the no-argument E2E flow: freeze the previous baseline, build the CREDIT sample from archived source rows, and run against real DEV Symcor and Tungsten providers. Capture the actual exit code and logs.
+4. Download the newly generated workbook, verify its checksum, open it, and inspect the source columns, result rows, embedded front/back images, OCR fields and confidences, count reconciliation, and baseline comparison.
+5. Return the downloadable workbook, a preview of its result rows, and the actual exit code, run ID, output path, and PASS/FAIL results. Identify any reused results explicitly.
+
+Keep any necessary script or code fixes in the local repository and synchronize them to DEV.
+
+Continue through execution and verification. If permissions genuinely block completion, report the exact denied command, exit code, and missing privilege; do not substitute an older workbook or report an unexecuted run as successful.
