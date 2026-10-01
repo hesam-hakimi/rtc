@@ -1,54 +1,42 @@
-CLUE installer — focused repair and verification
+CLUE — whole-project Production readiness assessment
 
-Continue from CLUE_INSTALLER_PRODUCTION_READINESS_2026-10-01.md. The assessment examined TD-Universe/W001CLUEinitialRepo, branch release-candidate/clue-app-clue-20260926, reported commit 1897737 and candidate 1.1.2-SNAPSHOT.
+Assess the current CLUE candidate and answer: “Are we ready to deploy this exact candidate to Production?” Review the application, release package, installer, provider integrations and operational handoff. This is an assessment only. Use one agent, work sequentially, and write the report in English.
 
-Verify current native Git state before editing; preserve unrelated work. Use one agent and sequential edits. Keep code, tests and reports in English.
+1. Establish the exact candidate and current requirements
+Read AGENTS.md, 00_START_HERE.md, 01_CURRENT_STATE.json, the latest deployment/runbook and acceptance documents, and CLUE_DEV_Excel_Run_and_Reuse_Procedure_2026-10-01.md. Locate the latest installer assessment and subsequent repair/test results if available. A repair prompt is not proof that a repair was implemented.
 
-Goal: identify the four actual DEV verification failures, repair confirmed deployment defects, and prepare a tested candidate for DEV validation.
+Locate TD-Universe/W001CLUEinitialRepo and verify its actual current branch and full HEAD; do not assume release-candidate/clue-app-clue-20260926 is still the assessed candidate. Record local changes, remote synchronization evidence, candidate version, archive path, SHA-256 and build provenance. If there is no identified Production candidate, say so. Compare source, packaged files and installed files using existing authorized read-only access. Explain generated/configuration differences without reading or printing secrets. Missing host or artifact access is an evidence gap.
 
-Scope: installer, bootstrap, deployment configuration, related tests and runbook. Preserve application business logic, approved endpoints, environment defaults and CI/CD/pom/assembly/Salt configuration.
+2. Verify application and business correctness
+Trace the real flow: Excel input -> cheque selection -> Symcor retrieval -> front/back images -> Tungsten OCR -> enriched Excel output.
+Check:
+- All original worksheets and source A:W values are preserved, including account leading zeros. Exactly one result worksheet is added, with 41 columns A:AO, images at X:Y and eight field/confidence pairs at Z:AO, against the approved current contract.
+- Source-row/account/date/ISN/DocID provenance and source-to-cheque association are correct. Do not treat transaction UTI as a unique cheque identifier or invent parent/child filtering.
+- CREDIT and DEBIT acceptance have separate evidence, including multiple children, no match, unavailable images, partial OCR and duplicate inputs. Recheck historical Debit NO_MATCH and unavailable-image cases.
+- OCR values, confidence scale and image-side attribution meet documented acceptance criteria.
+Inspect actual output workbook bytes, manifests, verify.json and comparison.json when available. Distinguish measured counts from expected counts; the small CREDIT baseline expected 27 results, which is not a measured final count. A regression match is not independent proof of correct business mapping. An exit code of 0 alone is not business acceptance.
 
-1. Recover the actual failure evidence first
+3. Verify deployment, configuration and secrets
+Review download/local-package selection, trusted digest verification before extraction, safe archive members, Linux/Python dependencies, first install, repeat install, upgrade, interruption and rollback.
+Verify installer locking before mutation, backup/recovery protection, preservation of existing configuration/data, and failure handling for stage-limited runs. Inspect --only verify statically before considering any execution: historical assessment reported cleanup that could remove an existing tree when backup was skipped.
+Recheck the four reported DEV verification failures and five local preinstall failures against actual transcripts and current code. Identify each as FIXED, STILL_PRESENT or UNVERIFIED; do not assume the requested repairs happened.
+Trace active environment/profile selection and persisted install/data paths through the actual runtime loader. Resolve the supported environments from current documentation and code. Simulation must default off and be prohibited in server environments; laptop simulation requires explicit configuration, with no automatic fallback.
+Verify installer identity versus runtime NPID, scoped privilege delegation for the actual commands, effective file/directory permissions, and the Salt/Pillar/Vault or approved fallback path. Check non-interactive secret retrieval, certificate/key pairing, CA trust, failure behavior, temporary-file cleanup and redacted diagnostics. DEV identities, hosts or endpoints must not silently carry into Production. Confirm routine runtime paths do not depend on /tmp or development staging.
 
-Locate the existing 2026-10-01 failed-install transcript and its verification/offline-acceptance reports. Use already-authorized access through the correct runtime NPID. Retrieve redacted diagnostic evidence, not secrets.
+4. Verify provider resilience and unattended operation
+Inspect real Symcor/Tungsten integration evidence, environment-specific endpoints, TLS/authentication, timeouts and error handling. Determine whether retries can duplicate Tungsten jobs: retrying the same endpoint after a timeout, 429 or 5xx is not inherently safe. Require documented idempotency or reconciliation behavior for ambiguous submissions; do not assume job-status/idempotency capabilities exist.
+Review input -> processing -> completed -> archive transitions, incomplete-file handling, batch locking, crash recovery, duplicate processing and the approved scheduling interval. Confirm the exact AutoSys command, runtime account, working directory, configuration/secret loading, exit-code handling, logs/alerts and recovery runbook. Separate developer-account rehearsal from scheduler-account acceptance.
+Inspect SIT/PAT, business acceptance, required scans, release/promotion approvals and Production host/account readiness against project requirements. Do not invent new release frameworks.
 
-Record the names, expected/actual values and causes of the four failed checks, and correlate them with the archive digest.
+5. Perform safe verification and deliver the decision
+Inspect test side effects before executing existing validation commands in an isolated workspace. Run appropriate application and deployment regression checks, including supported Linux/POSIX checks that Windows skipped. Record commands, exact candidate, results and reasons for skips; clearly label historical test reports. No live provider requests, shared-host installation, scheduler changes, sudoers changes, source/config edits, rebuild/publish, commit/push/merge or deployment are authorized by this assessment. Produce only the assessment report. If access is blocked, continue independent checks and state exactly what could not be verified.
 
-Do not reinstall or run –only verify against /app/clue to discover these errors. First inspect stage selection, traps and cleanup: the assessment found that stage-limited runs can skip backup and then remove an existing tree.
+Save CLUE_PRODUCTION_READINESS_ASSESSMENT_2026-10-01.md in the existing project documentation location. Lead with:
+- GO: the exact candidate satisfies every mandatory Production requirement with evidence.
+- NO_GO: a confirmed mandatory defect or unmet prerequisite prevents deployment.
+- INSUFFICIENT_EVIDENCE: no confirmed blocker was established, but mandatory readiness evidence is missing. This does not authorize deployment.
 
-If access is denied, record the missing access and continue independent local repairs. Do not broaden sudo permissions.
+Keep local tests, DEV host evidence, live-provider runs, SIT/PAT/business acceptance and Production operations separate. Provide:
+Area | PASS / FAIL / UNVERIFIED / N/A | Candidate and evidence | Practical impact | Smallest next action
 
-Keep the four DEV acceptance failures separate from the five deterministic local preinstall test failures. Fix acceptance failures within deployment scope. If a cause requires business-code changes or an external decision, report it explicitly without weakening verification.
-
-2. Repair the safety and configuration defects
-
-* Acquire the installer lock before the first mutation in full, stage-limited and rollback flows, including remediation. Release it correctly on failure/interruption.
-* Ensure destructive operations have a valid backup or fail before mutation. Protect existing installations when –only/–from skips backup. Inspect –only verify explicitly. Never let cleanup treat an existing installation as a failed first install. Preserve configuration and operational files according to the documented contract.
-* Align bootstrap delegation with the intended command-scoped sudoers rule. Verify authorization for the actual permitted installer command; do not substitute sudo true or a temporary bash script. Cover clean first installation and upgrade without relying on stale installed installer bytes or granting broad shell access.
-* Make the documented DEV data-root override effective and consistent between preflight and runtime. Preserve current default paths and approved YAML values; use the smallest configuration-boundary change. Correct the five failing preinstall tests through intended behavior, without replacing fixtures with hard-coded server paths.
-* Make redacted verification reports accessible to the intended authorized operator. Check parent-directory traversal as well as file permissions; 0640 inside a 0700 directory is insufficient. Preserve secret-directory restrictions.
-* Update affected runbook instructions. Preserve default-off server simulation, environment-marker checks and mandatory PAT/PROD digest verification.
-
-3. Verify behavior on Linux
-
-Run affected installer, bootstrap, preinstall and runtime-secret wrapper suites in an available isolated Linux/WSL environment. Execute the POSIX wrapper tests previously skipped on Windows.
-
-Inspect test side effects first. Use fixtures and mocks without provider calls or real privilege changes.
-
-Use behavioral checks for failed verification preserving an existing tree, stage-limited lock/backup protection, interruption recovery and command-scoped delegation. Exercise a full isolated install, repeat installation and failed upgrade/rollback where supported. Do not rely solely on source-string assertions.
-
-4. Deliver the corrected candidate
-
-After relevant checks pass, use the existing packaging process to build a local DEV test archive without changing the release version or CI/CD. Produce its SHA-256 sidecar and verify packaged deployment files match corrected source.
-
-Report:
-
-* Exact Git state and changed files.
-* Each of the four DEV failures, its cause and resolution—or remaining evidence gap.
-* Commands, results and skipped checks.
-* Artifact path and SHA-256.
-* READY_FOR_DEV_VALIDATION or BLOCKED, with concrete remaining items.
-
-Separate executed results from historical reports.
-
-Do not publish, deploy to a shared host, alter host sudoers, commit/push/merge or claim Production readiness. Keep Production artifact promotion, target identity/host confirmation, AutoSys acceptance and live-service/SIT/business acceptance explicitly pending where evidence is absent.
+List confirmed blockers separately from missing evidence and optional improvements. For each blocker/gap, give the smallest corrective action, responsible role and evidence needed to close it. Finish with at most five prioritized actions and a direct answer to whether we can go to Production today. Do not claim readiness from test counts, screenshots, a DEV test artifact or a single successful CREDIT run alone.
