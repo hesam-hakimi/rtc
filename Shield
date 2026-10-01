@@ -1,71 +1,54 @@
-Assess whether PR #30 can be integrated into my branch without losing existing work or introducing regressions. Perform the review and isolated verification now; do not merge or publish anything.
+CLUE installer — focused repair and verification
 
-Repository: TD-Universe/W001CLUEInitialRepo
-PR: https://github.com/TD-Universe/W001CLUEInitialRepo/pull/30
-Expected source: feature/symcor-tungsten-output-20260928
-Expected target / branch to protect: release-candidate/clue-app-clue-20260926
+Continue from CLUE_INSTALLER_PRODUCTION_READINESS_2026-10-01.md. The assessment examined TD-Universe/W001CLUEinitialRepo, branch release-candidate/clue-app-clue-20260926, reported commit 1897737 and candidate 1.1.2-SNAPSHOT.
 
-Verify these names against current PR metadata and repository state. The screenshot shows merge conflicts; determine the current status from fresh evidence.
+Verify current native Git state before editing; preserve unrelated work. Use one agent and sequential edits. Keep code, tests and reports in English.
 
-1. Protect the existing workspace.
+Goal: identify the four actual DEV verification failures, repair confirmed deployment defects, and prepare a tested candidate for DEV validation.
 
-* Record the current branch, HEAD, and working-tree status before starting.
-* Do not switch branches, stash, reset, clean, rebase, or edit files in my existing workspace.
-* Use separate temporary worktrees for review, merge simulation, and tests.
-* Do not push, approve the PR, perform an actual PR merge, deploy, or call live Symcor/Tungsten services.
-* Work sequentially with one agent.
+Scope: installer, bootstrap, deployment configuration, related tests and runbook. Preserve application business logic, approved endpoints, environment defaults and CI/CD/pom/assembly/Salt configuration.
 
-2. Establish exactly what is being reviewed.
+1. Recover the actual failure evidence first
 
-* Read applicable AGENTS.md instructions and the latest relevant project documentation.
-* Fetch the necessary refs safely and record the PR head SHA, latest target SHA, local owner-branch SHA, and relevant merge bases.
-* Identify local commits absent from the remote target. If the local owner branch differs from the remote target, assess both integration scenarios separately.
-* Inspect uncommitted changes for overlap without modifying them. State clearly that they are outside any commit-based test result.
-* If remote information is unavailable, continue with available evidence and identify what could not be verified.
+Locate the existing 2026-10-01 failed-install transcript and its verification/offline-acceptance reports. Use already-authorized access through the correct runtime NPID. Retrieve redacted diagnostic evidence, not secrets.
 
-3. Review overlap and semantic conflicts.
-    Compare each side’s changes from its relevant merge base, distinguishing shared history from independently introduced changes.
+Record the names, expected/actual values and causes of the four failed checks, and correlate them with the archive digest.
 
-Identify:
+Do not reinstall or run –only verify against /app/clue to discover these errors. First inspect stage selection, traps and cleanup: the assessment found that stage-limited runs can skip backup and then remove an existing tree.
 
-* Files and functions changed by both sides.
-* Duplicate implementations, incompatible interfaces, and changes that could overwrite or undo existing fixes.
-* Conflicts between code, configuration, installation instructions, and tests.
-* Whether the PR’s actual scope matches its description. Do not assume it is tests-only.
-* Tests that weaken assertions, introduce excessive mocking, hide failures, or silently enable simulation.
+If access is denied, record the missing access and continue independent local repairs. Do not broaden sudo permissions.
 
-Inspect affected CLUE behavior, including installer/runtime configuration, environment selection, secrets loading, simulator controls, Symcor/Tungsten processing, output workbook preservation, invalid-record handling, logging, and retry behavior. Review unchanged callers where shared interfaces are affected.
+Keep the four DEV acceptance failures separate from the five deterministic local preinstall test failures. Fix acceptance failures within deployment scope. If a cause requires business-code changes or an external decision, report it explicitly without weakening verification.
 
-For each material overlap, explain both intentions, the combined effect, and the recommended resolution. Cite file paths, line numbers, and commits.
+2. Repair the safety and configuration defects
 
-4. Simulate the integration.
+* Acquire the installer lock before the first mutation in full, stage-limited and rollback flows, including remediation. Release it correctly on failure/interruption.
+* Ensure destructive operations have a valid backup or fail before mutation. Protect existing installations when –only/–from skips backup. Inspect –only verify explicitly. Never let cleanup treat an existing installation as a failed first install. Preserve configuration and operational files according to the documented contract.
+* Align bootstrap delegation with the intended command-scoped sudoers rule. Verify authorization for the actual permitted installer command; do not substitute sudo true or a temporary bash script. Cover clean first installation and upgrade without relying on stale installed installer bytes or granting broad shell access.
+* Make the documented DEV data-root override effective and consistent between preflight and runtime. Preserve current default paths and approved YAML values; use the smallest configuration-boundary change. Correct the five failing preinstall tests through intended behavior, without replacing fixtures with hard-coded server paths.
+* Make redacted verification reports accessible to the intended authorized operator. Check parent-directory traversal as well as file permissions; 0640 inside a 0700 directory is insufficient. Preserve secret-directory restrictions.
+* Update affected runbook instructions. Preserve default-off server simulation, environment-marker checks and mandatory PAT/PROD digest verification.
 
-* Attempt the merge using pinned SHAs only inside a temporary worktree.
-* Report the actual Git result and every conflicted file.
-* Never resolve conflicts by blindly choosing “ours” or “theirs.”
-* For unambiguous conflicts, you may construct and test a provisional resolution in the isolated worktree. Record its complete resolution diff.
-* Leave ambiguous conflicts unresolved and describe the decision needed.
-* Distinguish the original PR’s mergeability from the provisional candidate’s results.
+3. Verify behavior on Linux
 
-5. Verify behavior.
+Run affected installer, bootstrap, preinstall and runtime-secret wrapper suites in an available isolated Linux/WSL environment. Execute the POSIX wrapper tests previously skipped on Windows.
 
-* Use the repository’s documented checks and relevant regression tests.
-* Establish the target/owner baseline, then test the combined candidate under equivalent conditions.
-* Check for import, build, configuration, test-discovery, and runtime-contract failures.
-* Separate pre-existing failures from newly introduced failures.
-* Do not change application behavior or weaken tests merely to obtain a passing result.
-* If conflicts prevent combined testing, test the individual branches where useful, but do not present that as proof that integration is safe.
-* Report commands, exit codes, test counts, skipped checks, and limitations. Claim success only for checks actually executed.
+Inspect test side effects first. Use fixtures and mocks without provider calls or real privilege changes.
 
-6. Return a concise evidence-based report.
-    Include:
+Use behavioral checks for failed verification preserving an existing tree, stage-limited lock/backup protection, interruption recovery and command-scoped delegation. Exercise a full isolated install, repeat installation and failed upgrade/rollback where supported. Do not rely solely on source-string assertions.
 
-* Reviewed repository, branches, and exact SHAs.
-* Mechanical merge result: CLEAN or CONFLICTED.
-* An overlap table: file/function | my change | PR change | combined risk | recommended action.
-* Baseline versus combined-candidate verification results.
-* Any provisional resolution diff.
-* Conclusion: SAFE WITHIN TESTED SCOPE, NEEDS CHANGES, or INSUFFICIENT EVIDENCE.
-* Exact next actions needed before merging.
+4. Deliver the corrected candidate
 
-A clean Git merge alone does not establish behavioral safety. Scope the conclusion to the reviewed SHAs and executed checks, and confirm that my original branch, HEAD, and working-tree contents remain unchanged.
+After relevant checks pass, use the existing packaging process to build a local DEV test archive without changing the release version or CI/CD. Produce its SHA-256 sidecar and verify packaged deployment files match corrected source.
+
+Report:
+
+* Exact Git state and changed files.
+* Each of the four DEV failures, its cause and resolution—or remaining evidence gap.
+* Commands, results and skipped checks.
+* Artifact path and SHA-256.
+* READY_FOR_DEV_VALIDATION or BLOCKED, with concrete remaining items.
+
+Separate executed results from historical reports.
+
+Do not publish, deploy to a shared host, alter host sudoers, commit/push/merge or claim Production readiness. Keep Production artifact promotion, target identity/host confirmation, AutoSys acceptance and live-service/SIT/business acceptance explicitly pending where evidence is absent.
