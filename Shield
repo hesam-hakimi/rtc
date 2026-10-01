@@ -1,11 +1,13 @@
-Continue CLUE with a coordinated regression-repair task.
+Perform a read-only regression review of the current CLUE working tree.
 
-The latest full-suite screenshot reports 97 failed, 1535 passed, 75 skipped and 1 error. Treat these as observed results, not proof of their cause. Coordinate this session as the only writer while repairing the shared checkout.
+Another session is already reviewing the implementation. Do not edit application code, configuration or tests.
 
-1. Verify the current branch, HEAD, Python interpreter and imported application source path. Preserve a restorable snapshot of all existing modified and untracked work before editing. Read the latest project requirements and applicable repository instructions.
-2. Read the complete saved report at $env:TEMP\clue_full_suite.txt. Extract a fixed list of failed/error node IDs before further runs change pytest’s cache. Group failures by root cause and prioritize the error and shared import, configuration or fixture problems.
-3. Reproduce each group sequentially with -n 0 and useful tracebacks. Determine whether it is an application regression, an outdated expectation following an approved requirement change, an environment problem, or shared-state/test-isolation interference.
-4. Repair the root cause with minimal coherent changes. Update tests only against documented intended behavior. Preserve meaningful assertions, Excel output and association contracts, simulation defaults, runtime-secret precedence and safe Tungsten submission behavior. Do not delete, skip or weaken tests merely to obtain green results.
-5. After each repair, run that failure group and relevant neighboring tests. After focused checks pass, run the full suite with the existing four-worker configuration and –durations=20. Investigate failures that appear only in parallel as test-isolation or concurrency defects.
+Verify the current branch, HEAD and working-tree changes, including modified and untracked files. Read the applicable repository instructions and current requirements.
 
-Report each root cause, its fix and actual verification results. Explain remaining skips and unresolved failures. Keep the work local; do not build, deploy, push or call live providers.
+Start with the existing report at $env:TEMP\clue_full_suite.txt. The latest result shows 97 failed tests and 1 error.
+
+Group failures by shared root cause. Inspect the affected code, fixtures and assertions. Distinguish application regressions, outdated test expectations, environment problems and test-isolation issues. Investigate overlapping changes without assuming parallel sessions caused every failure.
+
+Do not rerun the full suite. If necessary, reproduce only specific failed tests using isolated temporary and cache paths.
+
+Return an evidence-based report with confirmed findings, unresolved questions, affected files and minimal proposed fixes in priority order. Do not change source files or call live providers.
