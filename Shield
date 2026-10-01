@@ -1,19 +1,1 @@
 
-Continue the CLUE DEV execution task with this constraint: the tracked local repository is the source of truth for every persistent application, launcher, and deployment-script change.
-
-Review the launcher and installer reported in commit cb65a5e before installation:
-
-* Confirm their canonical repository paths, tracked status, and current commit. Verify that the staged DEV files match those exact source files.
-* Preserve the existing documented /app/clue application layout and entry points. Reuse the existing skill and execution scripts.
-* Keep one canonical implementation. Temporary DEV copies must be generated from tracked source.
-* Define any required launcher installation paths, dependencies, ownership, permissions, and exact sudoers rules in tracked deployment scripts/templates and the relevant installation documentation.
-* Keep secret values, generated workbooks, logs, and runtime state outside Git.
-
-If a script or application fix is necessary, implement it in the local source first, validate it, and stage that same change to DEV. Reconcile any existing DEV-only code changes before continuing. Preserve unrelated worktree changes.
-
-Provide a concise mapping:
-DEV path | canonical repository path | commit | deployed difference | validation
-
-Then continue the authorized E2E execution using the available passwordless sudo access, retrieve the newly generated workbook, and verify its contents and baseline comparison. Report the observed exit code and actual results.
-
-An execution-only workaround must not become an undocumented permanent change to the application.
