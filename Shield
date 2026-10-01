@@ -1,14 +1,15 @@
-Continue the current CLUE task. Audit whether the code and reusable scripts on DEV match their canonical repository sources. Perform a read-only comparison first.
+Continue and complete the CLUE source-to-server audit using actual repository files and live DEV file reads. Reuse the existing investigation.
 
-1. Inspect the actual repository, branch, HEAD and working-tree status. Identify the installed application release/version from available manifests. Distinguish committed source from uncommitted changes.
-2. Derive the mapping between repository Deliverables/ and /app/clue from the existing package and installer. Compare application code and deployment scripts file by file. Report missing files, extra executable files and content differences.
-3. Compare /usr/local/sbin/clue-dev-e2e and the payload under /usr/local/lib/clue/ against .github/skills/clue-dev-sample-xlsx-run/scripts/. Specifically verify whether the runner containing the temporary-path fixes has actually been installed.
-4. Use full SHA-256 hashes for exact byte comparisons. Classify LF/CRLF-only differences separately; do not silently normalize them and report exact equality.
-5. Review configuration separately: distinguish expected environment values from unexplained configuration or application behavior changes. Exclude generated workbooks, logs, state, caches and virtual-environment dependencies from source equality. Do not print secret values.
-6. Check for runtime dependencies on /tmp or temporary staging.
+Compare:
 
-Return a reconciliation table with server path, repository path, source version, comparison result, difference and required action. Mark unreadable or unverified files explicitly.
+* /app/clue against its mapped Deliverables sources.
+* /usr/local/sbin/clue-dev-e2e and /usr/local/lib/clue/ against the tracked skill scripts.
+* Installed configuration against repository configuration, identifying expected environment differences separately.
 
-An older deployed release may differ from current HEAD. Explain that version difference and identify any server-only changes that lack a tracked source counterpart.
+Specifically determine whether the installed runner has been updated to the source containing the temporary-path fixes.
 
-Do not modify the application, installed helpers, permissions or Git history during this audit. Finish with an evidence-based conclusion about what matches and what remains different.
+Return measured MATCH, DIFFERENT or UNVERIFIED results with full file hashes, source commit, installed version and exact differences. Distinguish release-version differences, LF/CRLF differences, stale installed scripts and server-only changes without tracked source.
+
+Keep this audit read-only. For each mismatch, identify the smallest correction and its canonical source. Do not deploy the entire current working tree or overwrite environment-specific configuration.
+
+Finish with a clear conclusion: which server files match, which differ, and what remains unverified. Do not claim completion based only on earlier screenshots or staging hashes.
