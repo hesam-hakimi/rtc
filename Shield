@@ -1,15 +1,14 @@
-Investigate how the previous CREDIT/DEBIT run actually executed successfully, while the current run stops at the NPID preflight check.
+Reconcile the DEV files with the local repository before continuing the run.
 
-Inspect the previous run’s available logs, scripts, and repository diffs. Compare:
+1. Identify the active local worktree, branch, and commit. Map every DEV application/script file modified during this session to its actual repository source.
+2. Compare their contents. Specifically check the NPID preflight correction, YAML CRLF handling, and pipefail/SIGPIPE fix.
+3. Port any DEV-only code fixes into the correct existing local source files. Preserve unrelated local changes. Keep credentials, runtime state, logs, and generated workbooks outside Git.
+4. Regenerate the staged DEV scripts from the reconciled repository sources. Verify matching SHA-256 hashes rather than maintaining separate edited copies.
+5. Run the relevant syntax checks and tests, and commit only the reconciled changes belonging to this task.
 
-* Host and effective runtime account.
-* Exact execution command and entry point.
-* Credential-loading mechanism, without exposing secret values.
-* Provider mode and evidence of real provider calls.
-* Run ID and observed exit code, if recorded.
+Show a table containing:
+DEV path | Repository source path | Differences resolved | Hash match | Git status
 
-Check whether the NPID-only preflight guard was introduced by the newly created verification script. Distinguish that script restriction from an actual operating-system permission failure.
+Distinguish application code, test/skill scripts, and environment-specific runtime configuration. Report any remaining DEV-only change explicitly.
 
-Explain whether you executed the previous run yourself or only downloaded an existing output. File ownership and COMPLETE metadata alone do not establish who executed it or its exit code.
-
-Show the evidence and the smallest change needed to reuse the previously working execution path. Mark anything you cannot verify as UNKNOWN.
+Then continue the pending DEV execution using the reconciled scripts. Keep CI/CD and release configuration out of scope.
