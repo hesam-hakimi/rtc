@@ -1,18 +1,19 @@
 
-Continue the current CLUE DEV task and execute it yourself using the configured passwordless sudo access.
+Continue the CLUE DEV execution task with this constraint: the tracked local repository is the source of truth for every persistent application, launcher, and deployment-script change.
 
-Read .github/skills/clue-dev-sample-xlsx-run/SKILL.md and reuse its existing scripts.
+Review the launcher and installer reported in commit cb65a5e before installation:
 
-1. Check effective privileges from your actual remote session with sudo -n -l. Use the permitted command to run as tclue999devs. If the configured launcher exists and is authorized, execute:
+* Confirm their canonical repository paths, tracked status, and current commit. Verify that the staged DEV files match those exact source files.
+* Preserve the existing documented /app/clue application layout and entry points. Reuse the existing skill and execution scripts.
+* Keep one canonical implementation. Temporary DEV copies must be generated from tracked source.
+* Define any required launcher installation paths, dependencies, ownership, permissions, and exact sudoers rules in tracked deployment scripts/templates and the relevant installation documentation.
+* Keep secret values, generated workbooks, logs, and runtime state outside Git.
 
-sudo -n -u tclue999devs /usr/local/sbin/clue-dev-e2e
+If a script or application fix is necessary, implement it in the local source first, validate it, and stage that same change to DEV. Reconcile any existing DEV-only code changes before continuing. Preserve unrelated worktree changes.
 
-    Verify actual permissions rather than relying on previous identity checks.
-2. Resolve confirmed prerequisite failures using your existing authorized access. Read the runtime secrets wrapper to identify every required Salt command. Never print secret values or request my password.
-3. Execute the no-argument E2E flow: freeze the previous baseline, build the CREDIT sample from archived source rows, and run against real DEV Symcor and Tungsten providers. Capture the actual exit code and logs.
-4. Download the newly generated workbook, verify its checksum, open it, and inspect the source columns, result rows, embedded front/back images, OCR fields and confidences, count reconciliation, and baseline comparison.
-5. Return the downloadable workbook, a preview of its result rows, and the actual exit code, run ID, output path, and PASS/FAIL results. Identify any reused results explicitly.
+Provide a concise mapping:
+DEV path | canonical repository path | commit | deployed difference | validation
 
-Keep any necessary script or code fixes in the local repository and synchronize them to DEV.
+Then continue the authorized E2E execution using the available passwordless sudo access, retrieve the newly generated workbook, and verify its contents and baseline comparison. Report the observed exit code and actual results.
 
-Continue through execution and verification. If permissions genuinely block completion, report the exact denied command, exit code, and missing privilege; do not substitute an older workbook or report an unexecuted run as successful.
+An execution-only workaround must not become an undocumented permanent change to the application.
