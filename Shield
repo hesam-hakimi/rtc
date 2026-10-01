@@ -1,74 +1,9 @@
-Continue the active CLUE task. Complete and correct the existing partial Tungsten primary/backup implementation in the actual repository. Implement the changes and run meaningful tests; do not stop at a design proposal.
+Continue the active task with faster verification.
 
-1. Establish the actual contract
+If the current full-suite run is still progressing, let it finish once and retain its result. Do not start a duplicate run.
 
-Read applicable AGENTS.md instructions. Verify the current branch, HEAD and working-tree changes, preserving unrelated work.
+During subsequent fixes, run the affected Tungsten tests and relevant configuration, stage/batch integration tests. Select them from the actual changed code and its callers.
 
-Inspect the existing Tungsten adapter, configuration, callers, retry handling and request/outcome tracking. Examine the supplied Postman collection/environment without exposing secret values.
+Run the full suite once after the final changes, adding –durations=20. Use measured timings to identify bottlenecks. Where unit tests spend time in real retry sleeps or timeout waits, use an injected fake clock/sleeper and fake transport while preserving behavioral assertions and production settings.
 
-Determine whether the two APIs are:
-
-* Equivalent job-processing endpoints, or
-* One endpoint with primary/secondary authentication keys.
-
-Verify request and response compatibility, authentication, job-status lookup and documented idempotency. For endpoint failover, determine whether duplicate prevention works ACROSS BOTH endpoints. Treat unverified capabilities as unknown.
-
-Reuse and repair the existing implementation instead of creating a parallel client.
-
-2. Implement primary/backup routing
-
-Keep normal successful requests on the primary API. Use the backup only under an explicit, documented failure policy.
-
-Support environment-specific primary/backup configuration, enablement, connect/read timeouts and a bounded overall attempt budget. Preserve compatibility with existing single-endpoint configuration.
-
-Use existing runtime-secret injection and precedence. Keep secrets out of source, logs and test fixtures. Validate an enabled backup configuration before submitting work.
-
-If Postman shows only two keys for the same endpoint, implement only the credential behavior justified by that contract; do not describe key rotation as endpoint availability failover.
-
-3. Make retries and failover safe
-
-Centralize failure classification and avoid multiplying retries across client and caller layers.
-
-* A failure proven to occur before submission can safely try the backup.
-* Treat 429 and transient server errors according to the provider contract. Honor Retry-After within the overall deadline. A status code alone does not prove that no job was created.
-* Reject invalid request/configuration errors without switching endpoints.
-* Treat 401/403 as authentication/authorization failures, not service outages. Credential fallback requires a verified rejection that occurred before job acceptance and an authorized alternative key.
-* A read timeout, connection loss after possible submission, or unusable successful response can mean UNKNOWN_OUTCOME. Preserve that outcome and do not automatically submit another job unless verified idempotency or authoritative recovery makes it safe.
-
-Do not invent an idempotency header or assume a client-generated UUID prevents duplicates. If supported, preserve the provider-defined idempotency identity across retries, failover and resume.
-
-Once a job is accepted, retain its endpoint/job identity for status and result retrieval. A legitimate empty OCR result must not automatically trigger another submission.
-
-4. Integrate with CLUE
-
-Use existing durable request/outcome tracking to prevent duplicate submissions during concurrency, restart or resume. Make this behavior explicit in tests.
-
-Keep retries finite, sequential and observable. If repeated primary failures would delay every item in a batch, use a small configurable circuit breaker with a cooldown and one controlled recovery attempt, respecting the same submission-safety rules.
-
-Normalize equivalent responses through the existing result mapping. Preserve document/front/back associations, confidence handling and the existing 41-column Excel result contract.
-
-Keep endpoint and attempt provenance in internal diagnostics/evidence without logging keys, image payloads or customer data.
-
-Keep the change within the relevant application adapter/configuration/tests. Preserve the existing simulation defaults, Symcor behavior, runtime-secret handling and unrelated deployment/E2E work.
-
-5. Test without live provider calls
-
-Use fake transports and test the actual adapter/caller integration. Cover:
-
-* Primary success with zero backup calls.
-* Proven pre-submission failure followed by backup success.
-* Both endpoints failing within the configured budget.
-* Invalid requests and authorization errors without inappropriate failover.
-* Ambiguous timeout/response outcomes without duplicate submission.
-* Verified idempotent recovery, if the actual contract supports it.
-* Retry-After and deadline enforcement.
-* Concurrent requests, restart/resume and circuit recovery where implemented.
-* Legacy single-endpoint configuration and unchanged Excel/front/back mapping.
-
-Run focused tests, then the relevant existing regression suite. Keep any missing provider-contract capability clearly identified; complete the independently testable work without fabricating it.
-
-6. Report the result
-
-Explain the original defect, the implemented behavior, changed files and actual test results. State which conditions permit backup use and which remain UNKNOWN_OUTCOME.
-
-Distinguish local implementation/test completion from DEV installation and live verification. Do not claim deployment or successful live failover without evidence. Do not build, deploy, commit, push or call live providers as part of this task.
+Report focused-test results separately from full-suite results. Do not treat the 62 passing failover tests as proof that the entire application passes.
