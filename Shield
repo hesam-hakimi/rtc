@@ -1,42 +1,85 @@
-CLUE — whole-project Production readiness assessment
+CLUE — Stabilize replaced files, reconcile tests, and simplify the current workflow
+Date: 2026-10-02
 
-Assess the current CLUE candidate and answer: “Are we ready to deploy this exact candidate to Production?” Review the application, release package, installer, provider integrations and operational handoff. This is an assessment only. Use one agent, work sequentially, and write the report in English.
+Context and objective
+Changes made on 2026-10-01 allowed CLUE to work partially. I copied those changed files over my existing files, but the tests still reflect the earlier implementation. Review and stabilize the current candidate, revise affected tests, and update the documentation for the new environment. The main objective is a simpler, repeatable installation and execution process.
 
-1. Establish the exact candidate and current requirements
-Read AGENTS.md, 00_START_HERE.md, 01_CURRENT_STATE.json, the latest deployment/runbook and acceptance documents, and CLUE_DEV_Excel_Run_and_Reuse_Procedure_2026-10-01.md. Locate the latest installer assessment and subsequent repair/test results if available. A repair prompt is not proof that a repair was implemented.
+The copied files are the starting candidate to preserve and investigate, not proof that every new behavior is correct. Existing tests and documentation may be stale, but may also expose real regressions. Determine which using requirements and evidence.
 
-Locate TD-Universe/W001CLUEinitialRepo and verify its actual current branch and full HEAD; do not assume release-candidate/clue-app-clue-20260926 is still the assessed candidate. Record local changes, remote synchronization evidence, candidate version, archive path, SHA-256 and build provenance. If there is no identified Production candidate, say so. Compare source, packaged files and installed files using existing authorized read-only access. Explain generated/configuration differences without reading or printing secrets. Missing host or artifact access is an evidence gap.
+Work in English. Use one agent and sequential edits. Perform the review and justified local changes; do not stop after producing recommendations. Keep changes bounded to stabilization, environment compatibility, relevant tests, and documentation.
 
-2. Verify application and business correctness
-Trace the real flow: Excel input -> cheque selection -> Symcor retrieval -> front/back images -> Tungsten OCR -> enriched Excel output.
-Check:
-- All original worksheets and source A:W values are preserved, including account leading zeros. Exactly one result worksheet is added, with 41 columns A:AO, images at X:Y and eight field/confidence pairs at Z:AO, against the approved current contract.
-- Source-row/account/date/ISN/DocID provenance and source-to-cheque association are correct. Do not treat transaction UTI as a unique cheque identifier or invent parent/child filtering.
-- CREDIT and DEBIT acceptance have separate evidence, including multiple children, no match, unavailable images, partial OCR and duplicate inputs. Recheck historical Debit NO_MATCH and unavailable-image cases.
-- OCR values, confidence scale and image-side attribution meet documented acceptance criteria.
-Inspect actual output workbook bytes, manifests, verify.json and comparison.json when available. Distinguish measured counts from expected counts; the small CREDIT baseline expected 27 results, which is not a measured final count. A regression match is not independent proof of correct business mapping. An exit code of 0 alone is not business acceptance.
+1. Preserve and establish the exact starting point
+- Read AGENTS.md and applicable repository instructions, then the latest reference entry point, current state, operator guide, and relevant change reports available in this workspace. Historical prompts and reports provide context, not proof of current implementation.
+- Identify the actual repository, branch, HEAD, dirty changes, untracked files, and relevant ignored runtime/source files. TD-Universe/W001CLUEinitialRepo is a historical repository reference; verify the actual checkout. Do not assume an old branch, version, commit, path, or test count is current.
+- Preserve a recoverable local checkpoint of the replaced source/configuration/scripts and existing tests before editing. Include relevant untracked source files; do not copy secrets or operational data into Git or reports. Do not reset, clean, checkout over, or overwrite the copied files.
+- Compare the current files against HEAD and any available pre-replacement or source copies. If provenance is unavailable, say so; do not infer it from timestamps alone.
+- Produce a concise inventory: changed file, observed behavior change, affected callers/tests/docs, and evidence or uncertainty. Check imports, entry points, script permissions, dependencies, and whether packaged/installed copies use the same source.
+- If another process or agent is modifying these files, avoid simultaneous edits and preserve its work.
 
-3. Verify deployment, configuration and secrets
-Review download/local-package selection, trusted digest verification before extraction, safe archive members, Linux/Python dependencies, first install, repeat install, upgrade, interruption and rollback.
-Verify installer locking before mutation, backup/recovery protection, preservation of existing configuration/data, and failure handling for stage-limited runs. Inspect --only verify statically before considering any execution: historical assessment reported cleanup that could remove an existing tree when backup was skipped.
-Recheck the four reported DEV verification failures and five local preinstall failures against actual transcripts and current code. Identify each as FIXED, STILL_PRESENT or UNVERIFIED; do not assume the requested repairs happened.
-Trace active environment/profile selection and persisted install/data paths through the actual runtime loader. Resolve the supported environments from current documentation and code. Simulation must default off and be prohibited in server environments; laptop simulation requires explicit configuration, with no automatic fallback.
-Verify installer identity versus runtime NPID, scoped privilege delegation for the actual commands, effective file/directory permissions, and the Salt/Pillar/Vault or approved fallback path. Check non-interactive secret retrieval, certificate/key pairing, CA trust, failure behavior, temporary-file cleanup and redacted diagnostics. DEV identities, hosts or endpoints must not silently carry into Production. Confirm routine runtime paths do not depend on /tmp or development staging.
+2. Define the intended simple workflow and the new environment
+Trace the actual path from obtaining or selecting a package through installation, configuration, environment selection, secret loading, execution, and output collection. Identify duplicated steps, obsolete wrappers, inconsistent defaults, and temporary helpers.
 
-4. Verify provider resilience and unattended operation
-Inspect real Symcor/Tungsten integration evidence, environment-specific endpoints, TLS/authentication, timeouts and error handling. Determine whether retries can duplicate Tungsten jobs: retrying the same endpoint after a timeout, 429 or 5xx is not inherently safe. Require documented idempotency or reconciliation behavior for ambiguous submissions; do not assume job-status/idempotency capabilities exist.
-Review input -> processing -> completed -> archive transitions, incomplete-file handling, batch locking, crash recovery, duplicate processing and the approved scheduling interval. Confirm the exact AutoSys command, runtime account, working directory, configuration/secret loading, exit-code handling, logs/alerts and recovery runbook. Separate developer-account rehearsal from scheduler-account acceptance.
-Inspect SIT/PAT, business acceptance, required scans, release/promotion approvals and Production host/account readiness against project requirements. Do not invent new release frameworks.
+Document the shortest supported operator flow. Remove unnecessary steps only when their purpose is understood and the required behavior remains covered. Prefer small changes to existing entry points over introducing another framework, wrapper, or configuration layer.
 
-5. Perform safe verification and deliver the decision
-Inspect test side effects before executing existing validation commands in an isolated workspace. Run appropriate application and deployment regression checks, including supported Linux/POSIX checks that Windows skipped. Record commands, exact candidate, results and reasons for skips; clearly label historical test reports. No live provider requests, shared-host installation, scheduler changes, sudoers changes, source/config edits, rebuild/publish, commit/push/merge or deployment are authorized by this assessment. Produce only the assessment report. If access is blocked, continue independent checks and state exactly what could not be verified.
+Build a compact environment matrix from current evidence:
+- OS/shell/Python and available dependencies;
+- installation root, data directories, and persistent versus temporary paths;
+- installing identity versus runtime NPID, required ownership, group access, and existing command-scoped privilege boundaries;
+- environment/profile selection, marker persistence, configuration precedence, and overrides;
+- approved endpoints, TLS/certificate handling, secret source, and permitted fallback behavior;
+- interactive execution versus scheduler execution, including working directory and required environment variables.
 
-Save CLUE_PRODUCTION_READINESS_ASSESSMENT_2026-10-01.md in the existing project documentation location. Lead with:
-- GO: the exact candidate satisfies every mandatory Production requirement with evidence.
-- NO_GO: a confirmed mandatory defect or unmet prerequisite prevents deployment.
-- INSUFFICIENT_EVIDENCE: no confirmed blocker was established, but mandatory readiness evidence is missing. This does not authorize deployment.
+Do not interpret “new environment” as a known host or profile without evidence. Inspect accessible configuration and already-authorized read-only host evidence. Record missing details and continue independent local work. Ask only a focused question if an unresolved value prevents a concrete decision; do not invent endpoints, identities, or permissions.
 
-Keep local tests, DEV host evidence, live-provider runs, SIT/PAT/business acceptance and Production operations separate. Provide:
-Area | PASS / FAIL / UNVERIFIED / N/A | Candidate and evidence | Practical impact | Smallest next action
+Preserve the established simulation policy: disabled by default; laptop simulation requires explicit configuration; deployed server environments must not silently simulate or fall back to fixtures. Resolve actual environment names from current configuration and requirements.
 
-List confirmed blockers separately from missing evidence and optional improvements. For each blocker/gap, give the smallest corrective action, responsible role and evidence needed to close it. Finish with at most five prioritized actions and a direct answer to whether we can go to Production today. Do not claim readiness from test counts, screenshots, a DEV test artifact or a single successful CREDIT run alone.
+3. Review and stabilize behavior
+For each discrepancy, classify it as:
+- intended change with a stale test/document;
+- implementation defect or regression;
+- environment/configuration incompatibility;
+- unresolved requirement or insufficient evidence.
+
+For intended changes, update the affected callers, tests, and docs together. For defects, make the smallest correction while preserving the useful new behavior. Do not restore the entire old implementation merely to satisfy old tests, or endorse a regression merely because it exists in the copied files.
+
+Pay particular attention to path/configuration consistency, environment selection, actual secret-loading behavior, startup/error reporting, and repeat execution without temporary staging dependencies.
+
+If installer paths changed, verify that failures and stage-limited commands preserve an existing installation, use appropriate locking/backup/rollback, and retain configuration. Treat previously reported installer issues as items to recheck, not automatically still-open defects.
+
+Preserve business contracts unless an explicitly approved change is evidenced: original input sheets/data, result layout and row attribution, image associations, error/partial outcomes, and retry semantics. Do not change cheque matching rules, loosen assertions, or add unsafe provider retries to obtain a passing run.
+
+Keep CI/CD, pom.xml, assembly.xml, release versions, infrastructure, and host privilege configuration outside this task unless an existing explicit authorization covers a necessary change.
+
+4. Reconcile and execute tests
+- Inspect test side effects and selection first. Establish a reproducible baseline for affected suites using isolated directories and mocked external boundaries.
+- For each affected test, decide retain, update, replace, retire, or add. Record the behavior requirement and reason. Retire a test only when its contract is demonstrably obsolete and any still-required coverage remains.
+- Test observable behavior with independently justified expectations. Do not copy observed output blindly into expected results, replace behavioral tests with source-string checks, or hide failures through skips, xfail, relaxed assertions, or excessive mocking.
+- Cover the changed normal path and relevant failure/recovery paths. Where affected, include configuration precedence, invalid/missing environment, server simulation rejection, missing secrets, path/permission failures, repeat execution, and output preservation.
+- Run applicable shell/POSIX checks on Linux or WSL. Windows skips do not establish Linux compatibility.
+- After focused fixes pass, run the safe, relevant project regression suite once against the final candidate. If parts require unavailable access or live services, identify those parts and report them as NOT RUN or BLOCKED, with reasons.
+- Keep local/mocked evidence separate from real DEV/VMC2 evidence. Live provider requests, shared-host installs, and operational file processing require existing explicit authorization and a bounded test input; a local pass is not a live-service pass.
+- Record commands, environment, tested source state, pass/fail/skip counts, and sanitized evidence locations. Re-run only what subsequent changes invalidate.
+
+5. Update the authoritative documentation and handoff
+Update the existing maintained documents rather than creating competing instructions. Reconcile the operator guide, configuration/environment reference, test instructions, current-state record, and relevant changelog/journal where present.
+
+Document the simplified steps, actual entry points, installation/runtime identities, configuration precedence, persistent paths, expected outputs, common failures, and recovery. Distinguish verified behavior from planned work and unavailable target validation. Mark superseded guidance clearly and preserve historical evidence as history.
+
+Keep the final code/test/doc diff reviewable. Do not claim changes are committed or remotely durable unless that happened and is verified. This task does not authorize publishing, deploying, merging, or changing shared infrastructure.
+
+Final report
+Provide:
+1. Exact starting and final source state.
+2. What changed in the copied files and what you corrected.
+3. The simplified operator workflow.
+4. A concise behavior → test → documentation mapping, including retired tests and reasons.
+5. Executed results and remaining failures, with local and target-environment evidence separated.
+6. Remaining unknowns and the next concrete action.
+
+Conclude with an evidence-based status such as:
+- LOCAL_CANDIDATE_STABILIZED / TARGET_VALIDATION_PENDING;
+- VERIFIED_IN_TARGET_ENVIRONMENT, only for the exact scenarios actually executed;
+- BLOCKED, with the specific unresolved blocker.
+
+Do not call this Production-ready solely because tests pass or a small DEV run succeeds. Complete all supported local stabilization and documentation work before handing back remaining external dependencies.
+
