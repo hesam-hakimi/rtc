@@ -1,101 +1,44 @@
-CLUE — Reconcile sudo regressions and finish the minimal installer
-2026-10-02 — Revision 2: direct NPID execution; sudo only for Vault retrieval
+CLUE — Finish the DEV-hardcode audit repairs and reconcile PAT/PROD blockers
+2026-10-02 — Follow-up for the active implementation session
 
-Continue the existing stabilization task. This prompt clarifies privilege handling based on the newly supplied comparison screenshots; it does not restart the project. Keep all compatible requirements from the earlier stabilization prompt, including complete preflight removal, preservation of newer owner fixes, test reconciliation, and documentation updates.
+Continue your current work from the latest working tree. Do not restart the project or discard your uncommitted fixes. The earlier screenshots are historical findings, not proof of the current source state.
 
-CONTROLLING OWNER CLARIFICATION
-The operator is already executing the commands as the intended NPID. Installation and normal application execution must work with that account's existing permissions. The ONLY permitted sudo operation in this workflow is the existing approved command for retrieving the required keys/secrets from Vault through Salt/Pillar. Other sudo permissions are restricted and must not be required. This supersedes every earlier allowance for installer delegation, interactive sudo, privileged handoff, or account switching. Do not add such branches for hypothetical users or environments.
+Work in English. Use one implementation writer with sequential edits. Establish ownership before editing files another session is changing. Preserve newer owner and Tungsten-session fixes; do not reset files or overwrite whole YAML files to resolve a small difference. Record repository, branch, HEAD, and the relevant initial diff.
 
-Work in English. Use one implementation writer with sequential edits. If another session is editing these files, coordinate ownership before editing overlapping files. The separate repository-hygiene investigation remains read-only; do not turn this task into repository cleanup.
+Scope and authority
+- Complete the bounded application/configuration repairs below and their tests and documentation. Routine repairs within this scope are authorized; do not stop merely to ask whether tests may be updated.
+- Keep CI/CD, pom.xml, assembly.xml, Salt infrastructure, and unrelated repository cleanup outside this change. Report packaging findings that require excluded files separately.
+- Preserve the minimal installer. Do not add sudo requirements, sudo probes, chown, or privileged setup. The existing approved secret-retrieval operation is the only permitted sudo use.
+- Do not deploy to PAT/PROD or submit live OCR jobs under this prompt. Preserve any existing commit/push authority; do not stage unrelated edits.
 
-1. Establish the actual source and reconcile changes
+1. Reconcile the known regression first
+Inspect the reported KeyError for tungsten_backup_auth_mode in dev.yaml and the current route-based fallback. Determine whether the configuration key was accidentally removed or the assertion is stale under an intentional, documented contract. Coordinate with the file owner and apply the smallest correct fix. Preserve comments and unrelated settings. Do not delete, skip, or weaken a valid test merely to get green results. Re-run the failing test and relevant backup-authentication tests.
 
-Record the repository, branch, HEAD, and existing staged/unstaged changes. The screenshots appear to show W001CLUEInitialRepo and a comparison from 8514fab... to 9cd61c5..., with a merge involving release-candidate/clue-app-clue-20260926. Verify the identifiers from the actual repository; do not reconstruct full SHAs from partial screenshots.
+2. Revalidate and preserve the three reported fixes
+- TLS verification must not become optional in PAT/PROD because a hostname contains "dev". Environment selection must be explicit; an unknown environment must not acquire DEV permissions. Cover primary and backup endpoints.
+- Manifest extraction status must represent actual acquisition provenance and must not label PAT/PROD data as DEV. Preserve persisted provenance during replay/export.
+- Keep unsupported PAT backup endpoints disabled and unset; do not invent a standby endpoint.
+Do not rename provider_mode: dev solely because of its name if it is the existing live-provider mode. Keep provider mode separate from deployment environment.
 
-Compare the latest candidate, the other contributor's changes, and the owner's newer fixes using available history and diffs. Preserve a recoverable checkpoint of current edits without resetting, stashing away, or overwriting another session's work. Do not accept or revert whole files merely because one version is newer. Inspect complete functions and their callers before changing behavior.
+3. Resolve named routes and non-synthetic profiles using available evidence
+Read the latest repository documentation, approved endpoint records, configuration, and current implementation. Resolve the conflict between PAT YAML describing an approved endpoint and pat.conf saying the route is deliberately blocked pending approval.
+Where existing authoritative evidence supports a PAT or PROD route, implement its environment-scoped binding using those exact endpoint/path/authentication settings. Do not infer PROD approval from PAT approval or infer approval from a YAML comment alone.
+Determine whether SYMCOR_DEV_V1 / TUNGSTEN_DEV_V1 are environment-neutral protocol contracts with historical names or actually DEV-specific contracts. Reuse them only where documented compatibility supports it, preserving attribution to the evidence. Never make a synthetic profile live-capable by flipping a flag or bypassing assert_live_allowed / production_policy_blockers.
+If evidence is missing, complete independent work and report the exact missing fact, conflicting sources, and smallest decision needed. An owner's approval alone is not technical proof of compatibility.
 
-Screenshots are partial evidence. They do not establish that the compared commits are in the active checkout, that tests passed, or that the PAT failure was fixed.
+4. Close every remaining original audit finding
+- B3: explicitly reconcile tungsten_config_id, symcor_client_id, and symcor_component. Trace their effective runtime sources, including existing secret injection. Validate requirements against the selected route/authentication/operation. Supply only evidenced non-secret configuration; never invent identifiers or remove a genuinely required check to unblock execution.
+- H4: inspect tracked session credentials without printing their values. Wire required secrets through the existing supported runtime secret mechanism and keep tracked examples non-secret. Do not remove credentials until the replacement loading path is understood and tested. If real credentials were committed, report the exposure and required owner rotation; do not rewrite Git history or rotate credentials yourself.
+- H5: verify the PAT NPID only from available authoritative configuration or existing target evidence. Otherwise retain UNVERIFIED and state exactly what evidence is missing.
+- H6: decouple staged Credit retrieval from the literal profile name rahona-workbook-dev. Use the existing explicit capability/configuration model, or the smallest documented extension, so an evidenced live PAT/PROD profile gets the intended two-operation Credit flow. Preserve Debit behavior and source-to-item mapping.
+- M4: remove PAT's silent root fallback if it can select an unintended location. Preserve the supported explicit install-path/environment configuration and installer persistence. Update the affected tests and documentation. Do not invent a replacement path or introduce new privileged steps.
+- Review remaining CLI defaults, process defaults, and missing timeout/failover/breaker settings. Change only proven environment leaks or inconsistencies; a DEV-looking name is not sufficient evidence. Explicitly classify development-script packaging findings without changing excluded build files.
+- Preserve current environment-marker selection and cross-environment guards. Keep simulation disabled on deployed DEV/PAT/PROD environments; isolated test fixtures may use mocks or synthetic data.
 
-2. Investigate the specific regressions visible in the screenshots
+5. Verify the final combined working tree
+Run focused regression tests for the changes, then the applicable full local suite once ownership is stable. Check live-provider configuration construction, route selection, missing-value errors, TLS enforcement, profile policy, Credit retrieval, backup authentication, and provenance using offline fixtures. Include negative tests for missing/unknown environment and cross-environment configuration.
+Do not describe a selected 287-test run as a full-suite pass while another known test fails. Report exact commands, counts, failures, skips, and reasons. Distinguish fixture-based validation from actual target execution. Resolve in-scope failures; explicitly report external or out-of-scope blockers without concealing them.
 
-Locate these changes in actual source and classify each as present, already corrected, obsolete after preflight removal, or not found:
-
-- Broad replacement of "sudo -n" with "sudo -u" in code, agent instructions, skills, documentation, and tests. These options are not interchangeable: -n controls prompting; -u requires a target account.
-- Malformed-looking authorization commands such as "sudo -u -l -U ..." and "sudo -u -l -u ...". Confirm exact argv; do not normalize these into a new preflight mechanism.
-- Bootstrap mode selection changed from a non-interactive "sudo ... true" probe to a potentially prompting probe. Both delegated and interactive branches were then made identical. Remove the probe and all installer delegation/interactive/root-mode branches; run directly as the existing NPID.
-- In clue_preinstall_check.sh, a "sudo -n -l <salt-call command>" listing was changed to "sudo -u \"$NPID\" <salt-call command>". Removing -l changes a permission listing into an actual secret-retrieval attempt if authorized. Comments still claim no secret is read. This preflight path must be retired, not repaired into another gate.
-- Tests and handoff documentation now expect or describe "sudo -u salt-call ..." or 'sudo -u "$SALT_CALL_BIN" ...'. With -u, the following token is a username, not the executable. The runtime implementation is not completely visible in the screenshots: inspect its full current body before concluding what it does.
-- Secret failure handling was shortened, while comments and error descriptions still refer to previous behavior. Keep concise, sanitized runtime errors that distinguish execution/permission failure, Salt failure, and unusable returned data without restoring a large diagnostic framework.
-- HOME-related flags were removed from multiple entry points and document generators. The owner has now confirmed direct NPID execution: remove the installer sudo handoff altogether rather than debating its -H flag. Use the current account's environment; do not create a HOME prerequisite or change identity.
-- Tests were edited to match changed command strings. Agreement between code, tests, and docs is insufficient when all three encode an incorrect command.
-
-Do not apply another global option replacement. Repair meaning and execution behavior at each surviving call site.
-
-3. Preserve the intended minimal execution contract
-
-Remove the installation preflight stage completely, including its invocation, stage registration, readiness/prerequisite wrappers, permission listings, generic sudo probes, and dependencies used only by them. Remove obsolete success messages and tests. Do not retain a no-op "preflight OK", or move the same checks into bootstrap, installation, or verification.
-
-Keep actual command failures meaningful. Removing preflight does not mean swallowing errors or reporting success after a failed operation.
-
-Separate these two operations:
-
-A. Direct installation and application execution as the existing NPID:
-- The caller is already the intended NPID. Run bootstrap, installer, extraction, application-local dependency setup, wrappers, verification, rollback, and application children directly under that same account.
-- Remove sudo-based installer invocation, sudo self-switching, delegated/interactive/root modes, and re-execution as another user. Do not replace them with su, runuser, pkexec, or another privileged handoff.
-- Remove sudo -l/-v/true probes and any test for broad or passwordless sudo access. Do not introduce a new identity or permissions preflight.
-- Do not prompt for a sudo password. Do not collect, pipe, store, or log passwords. Normal installation must not depend on sudoers entries for bash, the installer, filesystem commands, dependency installation, verification, or recovery.
-- Perform mkdir, mktemp, chmod on this run's owned private files, writes, and cleanup directly using the NPID's existing permissions. Preserve private secret file permissions without privileged commands.
-- Use existing provisioned application/data/temp directories and available system dependencies. Do not install OS packages, alter sudoers or ACLs, change system ownership, or create home directories. If an actual operation fails, report that operation and path with a nonzero result; do not retry through sudo or request broader access as an installer requirement.
-- Do not add configuration switches, fallback modes, or extra operator questions to support other installation identities. Keep the operator flow minimal.
-
-B. The single sudo exception: actual Vault secret retrieval through Salt/Pillar:
-- Preserve the working, approved command and target execution identity. Do not assume that running the application as NPID means salt-call must also execute as NPID.
-- The earlier evidence shows the intended form:
-  sudo -n "$SALT_CALL_BIN" pillar.get "secrets:${name}" --out=json
-  Confirm the current approved absolute executable and existing deployment contract from available source/evidence. Use only that already-approved retrieval operation and target identity; do not introduce a new sudo target or request additional privileges. The command above is a retrieval exception, not permission to run the installer or application as root.
-- Do not interpret this example as proof of current PAT permissions. Report unavailable host evidence as unresolved.
-- Keep retrieval non-interactive for scheduled execution, preserve correct argument boundaries, and report the real failure without probing unrelated sudo commands.
-- Keep this privileged call inside the existing secret-retrieval boundary. It must not launch the application through sudo, switch the parent process identity, or be invoked speculatively as a preflight probe. The application child continues directly as NPID.
-- Keep secrets out of logs and tracing; use isolated mocks for development tests. Preserve private temporary files, certificate/key handling, cleanup, and child exit-code propagation.
-
-4. Finish temp-root and PAT work without adding gates
-
-Use /data/clue/data_unencrypted/temp as the authoritative server temporary root across bootstrap staging, direct child invocation, installer, transcripts, reports, recovery artifacts, runtime-secret scratch, and child processes. Resolve it before the first temporary write and propagate it to direct child processes without account switching. Remove obsolete staging used solely for a privileged handoff. Do not silently fall back to /tmp or /root. Leave /dev/null unchanged.
-
-Use ordinary mkdir/mktemp/write operations and report their actual errors. Keep secret scratch private, clean up only this run's temporary resources, and retain reports/recovery artifacts as documented. Do not add a directory or permission preflight.
-
-Preserve the owner's newer fixes, including supported CLI argument forms, relative-path behavior, environment selection, and usable recovery commands. Do not change NPID casing or infer PAT/PROD DNS suffixes merely to satisfy old tests; establish those values independently from available evidence.
-
-Investigate the existing PAT verification report and transcript when accessible. A corrected sudo command or temp root alone does not prove the historical verify failure is fixed. If evidence is unavailable, complete the local corrections and state that PAT verification remains unresolved.
-
-5. Reconcile tests and instructions with behavior
-
-Retire tests for removed preflight behavior. Replace affected string-only expectations with focused behavioral checks using faithful boundary mocks that record argv and model the relevant sudo options. A mock must not accept an executable path as the -u username and then report success.
-
-Cover:
-- installation, verification, rollback, and normal application launch run directly as NPID without sudo or account-switching helpers; the only exception is an actual required Vault retrieval;
-- a mocked boundary that permits only the exact approved Vault retrieval and rejects every other sudo command still allows the intended workflow to succeed;
-- no installer password prompt, delegated/root-mode fallback, sudo permission probe, or privileged filesystem operation occurs;
-- the runtime Salt executable remains the command, not the -u argument;
-- removed permission probes cannot retrieve secrets or run before installation;
-- denied execution and invalid/empty Salt output fail without launching the child or exposing secret contents;
-- configured temp-root propagation, private scratch cleanup, and child exit status;
-- the newer owner fixes affected by reconciliation.
-
-Use isolated local tests, preferably the available Linux/WSL environment. Run relevant syntax and behavioral checks; syntax checks alone do not establish valid sudo arguments. Run the relevant regression suite on the final candidate and report actual results. If Windows fork/commit-limit failures block execution, report tests as blocked, not passed. Do not delete unrelated Windows diagnostic folders.
-
-Update affected operator docs and document-generation sources. Inspect the changed .github/agents/clue-deployment-developer.agent.md and .github/skills/clue-dev-job-run/SKILL.md for the same incorrect option substitutions; align technical guidance with the approved workflow while preserving unrelated rules. Update existing maintained instructions rather than creating competing runbooks.
-
-Remove active operator instructions that require sudo to start the installer, switch to NPID, verify, change ownership, or roll back. State the starting assumption plainly: the shell already belongs to the intended NPID. Document only the existing Vault retrieval permission as the sudo exception. Update tests to enforce this owner-approved contract instead of restoring old delegation behavior.
-
-6. Deliver a reviewable result
-
-Report:
-- exact source identity and provenance limitations;
-- each observed regression and its disposition;
-- remaining active sudo call sites, with evidence that every one performs only the approved Vault retrieval, and that all installer/application delegation paths have been removed;
-- removed preflight components and preserved owner fixes;
-- focused and regression test results, including blocked/skipped checks;
-- minimal operator commands and PAT status: FIXED WITH EVIDENCE, STILL FAILING, or UNRESOLVED.
-
-Keep changes within deployment/runtime wrappers, related configuration, affected tests, and maintained guidance. Do not expand into CI/CD, release versions, infrastructure provisioning, business logic, or repository hygiene cleanup. Do not commit, push, merge, or deploy unless already explicitly authorized. Complete supported local work without repeatedly requesting routine approval.
+Final handoff
+Provide a compact table covering B1-B3, H1-H6, and the medium findings: current evidence, action taken, verification, and remaining dependency. Include changed files and repository/branch/commit or uncommitted status. Update the relevant project documentation with the resulting configuration behavior.
+State local verification status and PAT/PROD runtime readiness separately. List only genuinely unresolved evidence, access, or owner decisions after completing all independent authorized work. Do not claim PAT/PROD readiness from unit tests or cleared policy checks alone.
