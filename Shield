@@ -92,4 +92,3 @@ Report:
 - minimal operator commands and PAT status: FIXED WITH EVIDENCE, STILL FAILING, or UNRESOLVED.
 
 Keep changes within deployment/runtime wrappers, related configuration, affected tests, and maintained guidance. Do not expand into CI/CD, release versions, infrastructure provisioning, business logic, or repository hygiene cleanup. Do not commit, push, merge, or deploy unless already explicitly authorized. Complete supported local work without repeatedly requesting routine approval.
-
