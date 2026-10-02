@@ -1,44 +1,10 @@
-CLUE — Finish the DEV-hardcode audit repairs and reconcile PAT/PROD blockers
-2026-10-02 — Follow-up for the active implementation session
+Continue from the existing checkpoint. Keep the merge commit and push paused.
 
-Continue your current work from the latest working tree. Do not restart the project or discard your uncommitted fixes. The earlier screenshots are historical findings, not proof of the current source state.
+1. Check the current owner instructions and deletion history for clue_preinstall_check.sh. If its removal implements the approved preflight-removal requirement, do not restore it merely to satisfy an outdated test.
+2. Reconcile test_runbook_contract.py and remaining references with the intended minimal installer. Preserve meaningful coverage of supported behavior. Do not skip tests or weaken assertions merely to obtain a passing result.
+3. Make sequential edits in the isolated candidate worktree. Preserve the existing staged changes and newer owner fixes. Keep the target branch/worktree unchanged.
+4. Preserve the privilege requirement: installation and normal execution must work under the executing NPID without additional sudo permissions. Only the explicitly authorized Key Vault retrieval may use sudo.
+5. Compare every changed YAML file against the target branch. Preserve unrelated target settings and report the exact keys intentionally changed. Do not resolve conflicts by replacing entire YAML files.
+6. Rerun full test collection and the applicable regression suite. Report passed, failed, and skipped counts, distinguishing pre-existing target failures from candidate regressions. Focused tests and YAML parsing alone do not establish merge readiness.
 
-Work in English. Use one implementation writer with sequential edits. Establish ownership before editing files another session is changing. Preserve newer owner and Tungsten-session fixes; do not reset files or overwrite whole YAML files to resolve a small difference. Record repository, branch, HEAD, and the relevant initial diff.
-
-Scope and authority
-- Complete the bounded application/configuration repairs below and their tests and documentation. Routine repairs within this scope are authorized; do not stop merely to ask whether tests may be updated.
-- Keep CI/CD, pom.xml, assembly.xml, Salt infrastructure, and unrelated repository cleanup outside this change. Report packaging findings that require excluded files separately.
-- Preserve the minimal installer. Do not add sudo requirements, sudo probes, chown, or privileged setup. The existing approved secret-retrieval operation is the only permitted sudo use.
-- Do not deploy to PAT/PROD or submit live OCR jobs under this prompt. Preserve any existing commit/push authority; do not stage unrelated edits.
-
-1. Reconcile the known regression first
-Inspect the reported KeyError for tungsten_backup_auth_mode in dev.yaml and the current route-based fallback. Determine whether the configuration key was accidentally removed or the assertion is stale under an intentional, documented contract. Coordinate with the file owner and apply the smallest correct fix. Preserve comments and unrelated settings. Do not delete, skip, or weaken a valid test merely to get green results. Re-run the failing test and relevant backup-authentication tests.
-
-2. Revalidate and preserve the three reported fixes
-- TLS verification must not become optional in PAT/PROD because a hostname contains "dev". Environment selection must be explicit; an unknown environment must not acquire DEV permissions. Cover primary and backup endpoints.
-- Manifest extraction status must represent actual acquisition provenance and must not label PAT/PROD data as DEV. Preserve persisted provenance during replay/export.
-- Keep unsupported PAT backup endpoints disabled and unset; do not invent a standby endpoint.
-Do not rename provider_mode: dev solely because of its name if it is the existing live-provider mode. Keep provider mode separate from deployment environment.
-
-3. Resolve named routes and non-synthetic profiles using available evidence
-Read the latest repository documentation, approved endpoint records, configuration, and current implementation. Resolve the conflict between PAT YAML describing an approved endpoint and pat.conf saying the route is deliberately blocked pending approval.
-Where existing authoritative evidence supports a PAT or PROD route, implement its environment-scoped binding using those exact endpoint/path/authentication settings. Do not infer PROD approval from PAT approval or infer approval from a YAML comment alone.
-Determine whether SYMCOR_DEV_V1 / TUNGSTEN_DEV_V1 are environment-neutral protocol contracts with historical names or actually DEV-specific contracts. Reuse them only where documented compatibility supports it, preserving attribution to the evidence. Never make a synthetic profile live-capable by flipping a flag or bypassing assert_live_allowed / production_policy_blockers.
-If evidence is missing, complete independent work and report the exact missing fact, conflicting sources, and smallest decision needed. An owner's approval alone is not technical proof of compatibility.
-
-4. Close every remaining original audit finding
-- B3: explicitly reconcile tungsten_config_id, symcor_client_id, and symcor_component. Trace their effective runtime sources, including existing secret injection. Validate requirements against the selected route/authentication/operation. Supply only evidenced non-secret configuration; never invent identifiers or remove a genuinely required check to unblock execution.
-- H4: inspect tracked session credentials without printing their values. Wire required secrets through the existing supported runtime secret mechanism and keep tracked examples non-secret. Do not remove credentials until the replacement loading path is understood and tested. If real credentials were committed, report the exposure and required owner rotation; do not rewrite Git history or rotate credentials yourself.
-- H5: verify the PAT NPID only from available authoritative configuration or existing target evidence. Otherwise retain UNVERIFIED and state exactly what evidence is missing.
-- H6: decouple staged Credit retrieval from the literal profile name rahona-workbook-dev. Use the existing explicit capability/configuration model, or the smallest documented extension, so an evidenced live PAT/PROD profile gets the intended two-operation Credit flow. Preserve Debit behavior and source-to-item mapping.
-- M4: remove PAT's silent root fallback if it can select an unintended location. Preserve the supported explicit install-path/environment configuration and installer persistence. Update the affected tests and documentation. Do not invent a replacement path or introduce new privileged steps.
-- Review remaining CLI defaults, process defaults, and missing timeout/failover/breaker settings. Change only proven environment leaks or inconsistencies; a DEV-looking name is not sufficient evidence. Explicitly classify development-script packaging findings without changing excluded build files.
-- Preserve current environment-marker selection and cross-environment guards. Keep simulation disabled on deployed DEV/PAT/PROD environments; isolated test fixtures may use mocks or synthetic data.
-
-5. Verify the final combined working tree
-Run focused regression tests for the changes, then the applicable full local suite once ownership is stable. Check live-provider configuration construction, route selection, missing-value errors, TLS enforcement, profile policy, Credit retrieval, backup authentication, and provenance using offline fixtures. Include negative tests for missing/unknown environment and cross-environment configuration.
-Do not describe a selected 287-test run as a full-suite pass while another known test fails. Report exact commands, counts, failures, skips, and reasons. Distinguish fixture-based validation from actual target execution. Resolve in-scope failures; explicitly report external or out-of-scope blockers without concealing them.
-
-Final handoff
-Provide a compact table covering B1-B3, H1-H6, and the medium findings: current evidence, action taken, verification, and remaining dependency. Include changed files and repository/branch/commit or uncommitted status. Update the relevant project documentation with the resulting configuration behavior.
-State local verification status and PAT/PROD runtime readiness separately. List only genuinely unresolved evidence, access, or owner decisions after completing all independent authorized work. Do not claim PAT/PROD readiness from unit tests or cleared policy checks alone.
+Then provide the source and target commit IDs, a concise change summary, YAML comparison, test evidence, and remaining blockers. Stop before the merge commit or push.
