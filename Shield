@@ -1,7 +1,95 @@
-Treat NPID casing and hostnames as separate decisions. Do not mark the copied values as owner-confirmed, and do not revert my current files merely to satisfy old tests.
+CLUE — Reconcile sudo regressions and finish the minimal installer
+2026-10-02 — Follow-up for the active implementation session
 
-Use actual target-host evidence where available. Otherwise, preserve the current values provisionally and document the unresolved items.
+Continue the existing stabilization task. This prompt clarifies privilege handling based on the newly supplied comparison screenshots; it does not restart the project. Keep all compatible requirements from the earlier stabilization prompt, including complete preflight removal, preservation of newer owner fixes, test reconciliation, and documentation updates.
 
-If EXPECT_HOST is used only by the preflight checks being removed, remove that check and its obsolete configuration/tests. If it has another runtime purpose, identify it before changing it. Do not infer DNS suffixes from environment names.
+Work in English. Use one implementation writer with sequential edits. If another session is editing these files, coordinate ownership before editing overlapping files. The separate repository-hygiene investigation remains read-only; do not turn this task into repository cleanup.
 
-Continue the installer simplification, test review, and documentation updates without blocking unrelated work on these unknowns.
+1. Establish the actual source and reconcile changes
+
+Record the repository, branch, HEAD, and existing staged/unstaged changes. The screenshots appear to show W001CLUEInitialRepo and a comparison from 8514fab... to 9cd61c5..., with a merge involving release-candidate/clue-app-clue-20260926. Verify the identifiers from the actual repository; do not reconstruct full SHAs from partial screenshots.
+
+Compare the latest candidate, the other contributor's changes, and the owner's newer fixes using available history and diffs. Preserve a recoverable checkpoint of current edits without resetting, stashing away, or overwriting another session's work. Do not accept or revert whole files merely because one version is newer. Inspect complete functions and their callers before changing behavior.
+
+Screenshots are partial evidence. They do not establish that the compared commits are in the active checkout, that tests passed, or that the PAT failure was fixed.
+
+2. Investigate the specific regressions visible in the screenshots
+
+Locate these changes in actual source and classify each as present, already corrected, obsolete after preflight removal, or not found:
+
+- Broad replacement of "sudo -n" with "sudo -u" in code, agent instructions, skills, documentation, and tests. These options are not interchangeable: -n controls prompting; -u requires a target account.
+- Malformed-looking authorization commands such as "sudo -u -l -U ..." and "sudo -u -l -u ...". Confirm exact argv; do not normalize these into a new preflight mechanism.
+- Bootstrap mode selection changed from a non-interactive "sudo ... true" probe to a potentially prompting probe. Both delegated and interactive branches were then made identical. Remove the obsolete probe and simplify mode handling around the actual operation.
+- In clue_preinstall_check.sh, a "sudo -n -l <salt-call command>" listing was changed to "sudo -u \"$NPID\" <salt-call command>". Removing -l changes a permission listing into an actual secret-retrieval attempt if authorized. Comments still claim no secret is read. This preflight path must be retired, not repaired into another gate.
+- Tests and handoff documentation now expect or describe "sudo -u salt-call ..." or 'sudo -u "$SALT_CALL_BIN" ...'. With -u, the following token is a username, not the executable. The runtime implementation is not completely visible in the screenshots: inspect its full current body before concluding what it does.
+- Secret failure handling was shortened, while comments and error descriptions still refer to previous behavior. Keep concise, sanitized runtime errors that distinguish execution/permission failure, Salt failure, and unusable returned data without restoring a large diagnostic framework.
+- HOME-related flags were removed from multiple entry points and document generators. Determine effects from real consumers rather than assuming that removing or restoring -H is always correct.
+- Tests were edited to match changed command strings. Agreement between code, tests, and docs is insufficient when all three encode an incorrect command.
+
+Do not apply another global option replacement. Repair meaning and execution behavior at each surviving call site.
+
+3. Preserve the intended minimal execution contract
+
+Remove the installation preflight stage completely, including its invocation, stage registration, readiness/prerequisite wrappers, permission listings, generic sudo probes, and dependencies used only by them. Remove obsolete success messages and tests. Do not retain a no-op "preflight OK", or move the same checks into bootstrap, installation, or verification.
+
+Keep actual command failures meaningful. Removing preflight does not mean swallowing errors or reporting success after a failed operation.
+
+Separate these two operations:
+
+A. Installer execution as the intended application account:
+- If already running as the intended NPID, execute directly with no sudo self-switch.
+- When an account switch is required, use the existing authorized mechanism with an explicit target account.
+- In the supported manual interactive installation flow, allow sudo itself to prompt at the terminal when necessary. Do not collect, pipe, store, or log the password.
+- In an explicitly unattended flow, retain non-interactive behavior so it cannot wait for input. Do not silently add interactive fallback.
+- Do not create a new configuration framework or extra operator questions to express these modes.
+- -H sets HOME to the target account's home; it does not itself grant root. Keep or omit it based on an identified consumer and intended behavior. Do not introduce home-directory creation or a new HOME prerequisite check.
+- Do not make root login, broad sudo, automatic sudoers edits, or recursive ownership changes part of routine installation.
+
+B. Runtime secret retrieval through Salt/Pillar:
+- Preserve the working, approved command and target execution identity. Do not assume that running the application as NPID means salt-call must also execute as NPID.
+- The earlier evidence shows the intended form:
+  sudo -n "$SALT_CALL_BIN" pillar.get "secrets:${name}" --out=json
+  Confirm the current approved absolute executable and existing deployment contract. If another target user is explicitly required, -u must be followed by that verified account.
+- Do not interpret this example as proof of current PAT permissions. Report unavailable host evidence as unresolved.
+- Keep retrieval non-interactive for scheduled execution, preserve correct argument boundaries, and report the real failure without probing unrelated sudo commands.
+- Keep secrets out of logs and tracing; use isolated mocks for development tests. Preserve private temporary files, certificate/key handling, cleanup, and child exit-code propagation.
+
+4. Finish temp-root and PAT work without adding gates
+
+Use /data/clue/data_unencrypted/temp as the authoritative server temporary root across bootstrap staging, handoff, installer, transcripts, reports, recovery artifacts, runtime-secret scratch, and child processes. Resolve it before the first temporary write and preserve it across account switching. Do not silently fall back to /tmp or /root. Leave /dev/null unchanged.
+
+Use ordinary mkdir/mktemp/write operations and report their actual errors. Keep secret scratch private, clean up only this run's temporary resources, and retain reports/recovery artifacts as documented. Do not add a directory or permission preflight.
+
+Preserve the owner's newer fixes, including supported CLI argument forms, relative-path behavior, environment selection, and usable recovery commands. Do not change NPID casing or infer PAT/PROD DNS suffixes merely to satisfy old tests; establish those values independently from available evidence.
+
+Investigate the existing PAT verification report and transcript when accessible. A corrected sudo command or temp root alone does not prove the historical verify failure is fixed. If evidence is unavailable, complete the local corrections and state that PAT verification remains unresolved.
+
+5. Reconcile tests and instructions with behavior
+
+Retire tests for removed preflight behavior. Replace affected string-only expectations with focused behavioral checks using faithful boundary mocks that record argv and model the relevant sudo options. A mock must not accept an executable path as the -u username and then report success.
+
+Cover:
+- direct NPID execution invokes no sudo;
+- authorized manual delegation permits terminal authentication, while unattended delegation cannot prompt;
+- the runtime Salt executable remains the command, not the -u argument;
+- removed permission probes cannot retrieve secrets or run before installation;
+- denied execution and invalid/empty Salt output fail without launching the child or exposing secret contents;
+- configured temp-root propagation, private scratch cleanup, and child exit status;
+- the newer owner fixes affected by reconciliation.
+
+Use isolated local tests, preferably the available Linux/WSL environment. Run relevant syntax and behavioral checks; syntax checks alone do not establish valid sudo arguments. Run the relevant regression suite on the final candidate and report actual results. If Windows fork/commit-limit failures block execution, report tests as blocked, not passed. Do not delete unrelated Windows diagnostic folders.
+
+Update affected operator docs and document-generation sources. Inspect the changed .github/agents/clue-deployment-developer.agent.md and .github/skills/clue-dev-job-run/SKILL.md for the same incorrect option substitutions; align technical guidance with the approved workflow while preserving unrelated rules. Update existing maintained instructions rather than creating competing runbooks.
+
+6. Deliver a reviewable result
+
+Report:
+- exact source identity and provenance limitations;
+- each observed regression and its disposition;
+- surviving sudo call sites, purpose, target identity, prompting behavior, and reason for any -H;
+- removed preflight components and preserved owner fixes;
+- focused and regression test results, including blocked/skipped checks;
+- minimal operator commands and PAT status: FIXED WITH EVIDENCE, STILL FAILING, or UNRESOLVED.
+
+Keep changes within deployment/runtime wrappers, related configuration, affected tests, and maintained guidance. Do not expand into CI/CD, release versions, infrastructure provisioning, business logic, or repository hygiene cleanup. Do not commit, push, merge, or deploy unless already explicitly authorized. Complete supported local work without repeatedly requesting routine approval.
+
