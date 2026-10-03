@@ -1,9 +1,41 @@
-Continue the bounded repair already authorized. This report still shows the original three-file patch and leaves the follow-up work outstanding.
+CLUE — Prepare the current patch for independent review; no further edits
 
-Preserve tungsten_route.apply() conflict validation and PROD’s named-route requirement. Correct the route definitions/resolution to match each environment’s existing approved configuration, including applicable primary and backup paths and authentication modes. Do not remove route validation, remove PROD’s route name, or introduce DEV fallback.
+Pause implementation and preserve the current working tree. Prepare a review bundle of the environment/endpoint changes so the actual code can be reviewed before deciding on another correction.
 
-Distinguish an internal route-mapping defect from genuinely missing API information. Use verified repository configuration and documentation; do not invent endpoints or authentication details. If a specific value or external approval is genuinely missing, identify exactly which one and its source requirement. Continue the other authorized corrections independently.
+This task is read-only for project files. Do not revert changes, refactor, change configuration, commit, push, deploy, or contact real providers.
 
-Complete the remaining script/wrapper fixes for the prohibited credential-rotation flag and forced Symcor identity overrides, preserving existing security policy. Update the stale documentation and reconcile the affected tests with evidence.
+1. Identify the exact snapshot.
+    Record repository, branch, HEAD commit, working-tree status, and changed-file statistics. Include the known pre-change baseline if available; explicitly state if it is unknown.
 
-The owner has already authorized these limited code corrections. Keep the scope narrow and report implementation results, not another restatement of the same blockers. Keep local loader/test success separate from real server execution.
+Export the complete current patch, covering staged and unstaged changes. Include relevant new/untracked source and test files separately because ordinary git diff does not include them. Do not omit changes merely because they were made earlier in this session.
+
+2. Include the current files needed to trace behavior.
+    Locate and copy:
+
+* tungsten_route.py, including ROUTES, apply(), and route exceptions.
+* config.py and the relevant environment-selection/override logic.
+* batch.py and envsettings.py.
+* clue_dev_integration.sh and clue_dev_verify.sh.
+* Relevant installer/operational-wrapper files showing whether the integration script is packaged, checked for existence, or actually executed.
+* DEV, PAT, and PROD YAML profiles and the relevant deployment .conf files.
+* Changed tests and the relevant changed documentation.
+
+Use a manifest with repository-relative paths. Export copies only. Exclude credentials, private keys, certificates, .env files, Vault output, and business data. Redact secret values in exported copies while preserving configuration keys, non-secret endpoints, and code structure. Record any redactions or omissions.
+
+3. Provide a short evidence-based explanation.
+    With file/function references, answer:
+
+* What is the actual call path for installation, verification, and normal scheduled batch execution? Distinguish file presence from invocation.
+* Is the Python ROUTES table an independently governed destination allowlist or a duplicate of YAML? Identify supporting requirements, or state that none were found.
+* In what order are profile values and overrides resolved and validated?
+* Exactly where does the forced rahona-workbook-testcase profile block PROD, and does that affect normal batch execution or only verification?
+* Which PAT/PROD backup API details remain unverified, and what repository evidence supports that conclusion?
+
+Do not redesign anything while answering.
+
+4. Include existing verification evidence.
+    Attach the actual available test summaries and commands for this snapshot. If the previously running full suite has completed, include its final result; otherwise mark it pending. Do not repeat the full suite solely to prepare this bundle. Separate reported results from results supported by retained output.
+
+Create one ZIP in an accessible output folder outside the tracked source tree. Include the patch, current source/configuration copies, manifest, brief review notes, and test evidence. Do not upload it to an external service.
+
+Return the exact ZIP path and a concise list of anything missing. This is an evidence-export task, not authorization for further implementation.
