@@ -1,49 +1,38 @@
-CLUE — Minimal fix for environment-specific endpoint overrides
+CLUE — Complete the bounded environment compatibility fix
 
-Continue the current implementation with a small, focused patch. The installation and runtime flow must support all intended deployment environments using their existing configuration.
+Continue from your current endpoint-override patch. The owner authorizes minimal corrections for the remaining issues identified in your report. Preserve the completed fix and all unrelated owner changes.
 
-Work in English, with one implementation writer and sequential edits. Preserve existing owner changes.
+Use one implementation writer with sequential edits. Work in English. Check the current repository instructions and relevant files before editing; identify the repository, branch, and commit in your report.
 
-1. Inspect the actual execution path first.
-    Read the current relevant repository instructions and trace the supported installer/runtime entry point, environment selection, active-environment marker, configuration loader, and calls to Deliverables/deploy/clue_dev_integration.sh.
+1. Establish the origin of the eight failures.
+    Reproduce the reported failures against the pre-patch implementation in an isolated temporary copy, using the same current YAML profiles, dependencies, and test command. Do not reset or overwrite the active working tree.
 
-The screenshots show:
+Compare failing test IDs and failure reasons before and after the patch. Git status alone does not prove that failures are pre-existing. If the exact baseline cannot be reconstructed, mark attribution unverified.
 
-* An unconditional CLUE_TUNGSTEN_BASE_URL export.
-* A fixed Tungsten API path containing web_SIT.
-* A literal Symcor URL passed through --symcor-url.
-* A fixed --provider-mode dev.
+2. Resolve the Tungsten route/configuration mismatch.
+    Inspect the existing route resolver and the approved DEV, PAT, and PROD profiles. Make the smallest change needed for route resolution to use the selected environment’s approved configuration consistently.
 
-Do not dismiss the issue because the filename contains “dev.” Establish whether this script participates in the shared installation/run flow. Limit investigation to the files needed to establish and fix that path.
+A missing PAT/PROD entry in ROUTES does not automatically mean the endpoint is unknown: first reconcile the URLs and route metadata already present in the repository.
 
-2. Make the smallest necessary correction.
-    Use the existing environment selection and central configuration loader. Read environment-dependent URLs and API paths from the selected environment’s existing configuration.
+Preserve route validation, authentication behavior, and cross-environment protection. Do not bypass validation, duplicate environment URLs in executable code, or guess missing hosts, paths, or authentication details. If required information is genuinely absent, identify the exact missing field and complete the other fixes.
 
-Remove or replace unconditional endpoint exports and literal CLI arguments that override the selected configuration. Check the adjacent Symcor certificate-host restriction only for consistency with the resolved endpoint.
+3. Correct the credential-rotation invocation.
+    The shared script must not unconditionally pass --credential-rotation-deferred into environments where existing policy prohibits it. Adapt the invocation to the established environment policy while preserving valid DEV behavior.
 
-Do not infer what --provider-mode dev means from its name. Inspect its implementation: it may select a provider implementation rather than a deployment environment. Change it only if necessary and supported by the existing configuration contract.
+Do not weaken the policy, change credential retrieval, or introduce additional sudo requirements.
 
-If required endpoint configuration is missing, stop with a clear configuration error before making a provider request. Never silently substitute a DEV endpoint or another environment’s profile. Do not invent missing URLs.
+4. Correct forced Symcor identity overrides.
+    Trace --symcor-client-id and --symcor-component through the integration script, clue_dev_verify.sh, and the existing loader.
 
-3. Keep the scope narrow.
+Remove unnecessary shell-to-CLI promotion that overrides the selected environment’s configured identity. Align the wrapper’s checks with the existing configuration resolution so that valid profile values do not require duplicate shell exports. Preserve supported explicit overrides and their documented validation.
 
-* Reuse existing configuration keys, profiles, marker, and precedence rules.
-* Preserve approved YAML values; do not rewrite profiles unnecessarily.
-* Do not introduce another configuration system, duplicate environment selector, broad preflight framework, or general refactor.
-* Do not change business processing, SOAP/OCR payloads, retry behavior, simulation policy, secrets retrieval, HKV handling, TLS verification, or sudo requirements.
-* Do not modify CI/CD, Maven, packaging, or unrelated scripts.
-* Leave proven isolated test fixtures unchanged unless they affect the shared execution path.
+5. Reconcile the directly affected tests and documentation.
+    Update stale test expectations only where current approved configuration proves they are outdated. Preserve meaningful assertions; do not skip, delete, or weaken tests to obtain a passing result.
 
-4. Verify the specific behavior.
-    Use focused tests with mocked provider calls or command capture to demonstrate that each supported environment resolves its own configured endpoints, an old exported value is not silently forced back into the shared path, and missing required configuration prevents a provider call.
+Correct the stale statement in CLUE_HANDOFF.md about explicitly exported route values.
 
-Do not contact real providers, deploy, merge, or create a release for this task. Do not weaken existing tests. Run the directly affected existing tests and applicable script syntax checks.
+Keep changes limited to these scripts, the necessary route/configuration resolution code, directly affected tests, and the relevant documentation paragraph. Preserve approved YAML values, business processing, payloads, retries, simulation policy, TLS verification, secrets handling, CI/CD, and packaging. Keep provider-mode dev unchanged because it selects the real adapters.
 
-Implement the bounded fix, then report:
+Run the previously affected test set and focused checks for all three environments, including missing configuration and cross-environment rejection, without real provider calls. Report actual results, any remaining failures, and a concise explanation of every changed file.
 
-* The verified execution path and root cause.
-* Changed files and why each change was necessary.
-* Configuration source and endpoint resolution for each supported environment.
-* Actual verification results and any remaining missing configuration.
-
-Keep local verification separate from server validation; do not claim production readiness.
+Complete this bounded repair without deploying, merging, publishing, or claiming server validation or production readiness.
