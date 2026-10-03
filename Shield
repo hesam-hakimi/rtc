@@ -1,56 +1,44 @@
-CLUE — Complete the configuration correction locally with minimal changes
 
-Continue the current endpoint repair. The owner cannot transfer repository files. Perform the source review and bounded correction locally, then show the important evidence directly in your response. Do not request another upload or create another review bundle.
+CLUE — Verify the current candidate with one controlled real PAT run
 
-Use one writer with sequential edits. Preserve the current working tree and all valid completed fixes. The recorded snapshot is TD-Universe/W001CLUEInitialRepo, branch hot-fixes-release-candidate, HEAD 8c81051 plus the existing patch. Verify the current state and preserve any newer changes.
+Continue from the completed endpoint/configuration correction. The owner authorizes a bounded functional test in PAT using the normal operational execution path.
 
-The owner’s requirement is:
-Approved environment configuration must be the single source of concrete endpoint URLs and API paths. Updating an approved endpoint must not also require editing a Python registry.
+Work in English. Preserve current changes. Do not restart the configuration redesign.
 
-Your review notes establish that:
+1. Identify the actual candidate and PAT runtime.
+    Record the repository, branch, commit, and relevant uncommitted changes. Confirm which version is installed on the PAT server; do not accidentally test an older build.
 
-* ROUTES duplicates YAML values and enforces agreement; no independently governed destination-allowlist requirement was found.
-* Normal scheduled execution invokes clue.batch directly. The integration script is executed by the verification path.
-* Existing runtime-context and cross-environment checks already participate in configuration resolution.
+If installation is needed, use the established PAT installation procedure for this candidate. Preserve environment configuration and existing privilege restrictions. Do not publish a release or modify CI/CD.
 
-Confirm those findings against the current source, then implement the smallest correction:
+Use the actual PAT environment and authorized runtime account. Do not relabel a DEV execution as PAT. If access or a required test input is unavailable, report the specific blocker and complete the available configuration checks.
 
-1. Remove duplicated endpoint data.
-    Replace the concrete DEV/PAT/PROD endpoint/path entries in tungsten_route.py with resolution from the selected environment’s existing approved configuration through the central loader.
+2. Confirm destinations through the normal runtime.
+    Use clue_operational_wrapper.sh and the existing central loader.
 
-Keep route identifiers and authentication/protocol rules in code where appropriate. Preserve PROD’s named-route requirement. Do not move the same endpoint dictionary elsewhere, introduce another configuration file, or add a second loader.
+Before provider contact, record the selected environment, configuration source, and effective full Symcor and Tungsten destinations, including primary/backup paths and authentication modes. Confirm the marker, deployment profile, and YAML consistently select PAT.
 
-2. Preserve meaningful validation.
-    Trace the flow from installed environment selection through profile loading, argument overrides, route resolution, and provider construction.
+Use current approved configuration as the reference. Do not manually export endpoint overrides or copy URLs into code.
 
-Retain the trusted selected-profile values separately from effective override values where validation requires that distinction. Reject contradictions in endpoint, path, environment, or authentication according to the existing contract.
+3. Handle the unresolved backup explicitly.
+    The PAT APIM backup operation path remains unverified. Do not guess an operation suffix or silently substitute DEV settings.
 
-Do not simply delete TungstenRouteConflict checks or make them compare two copies of the same already-overridden values. Preserve runtime-marker/profile consistency, missing-configuration rejection, and protection against cross-environment requests. No silent DEV fallback.
+A primary-only live test is acceptable only through an existing supported and authorized option; clearly record that backup behavior was not tested. Do not silently disable failover or change its policy. If no such option exists and the backup destination cannot be confirmed, report that specific live-test blocker instead of making speculative requests.
 
-Make the normal runtime and verification path resolve and report the same effective destination for the same configuration.
+4. Execute one bounded real scenario.
+    Use an existing authorized PAT test workbook and the supported intake/output workflow. Limit processing to that test input; do not process an unrelated backlog.
 
-3. Preserve completed work and keep the scope narrow.
-    Keep the removal of script endpoint pins, invalid output-format argument, prohibited credential-rotation flag, and forced Symcor identity overrides.
+Use real Symcor and Tungsten services, with simulation disabled and the existing secrets/TLS mechanisms. Do not use clue_dev_integration.sh’s forced synthetic profile as the normal operational test path.
 
-Do not modify approved YAML values, business processing, retries/failover behavior, secrets retrieval, TLS, sudo requirements, CI/CD, or packaging. Keep provider-mode semantics unchanged.
+Trace:
+Input receipt → Symcor retrieval → image preparation → Tungsten processing → enriched Excel → configured PAT output delivery.
 
-Do not change rahona-workbook-testcase or bypass PROD’s synthetic-profile protection in this patch. Document that its existing limitation affects live verification, not the normal scheduled path.
+If transport through the actual mailbox cannot be exercised, identify the exact tested start/end points and do not claim complete transport validation.
 
-PAT/PROD backup APIM operation paths remain unverified. Preserve the supplied configuration, do not append a guessed operation, and keep that uncertainty separate from successful local resolution.
+Preserve duplicate-request protection. Do not blindly rerun a request whose provider outcome is unknown.
 
-4. Verify behavior with focused tests.
-    Demonstrate through the real loader and mocked request/command capture:
+5. Report evidence and stop at this scope.
+    Report the actual exit status, stage results, input/output counts, row-association issues, workbook-contract checks, and output/log locations. Do not expose credentials or business data in the report.
 
-* Each environment resolves its configured primary and backup settings.
-* Changing an endpoint/path in an isolated test profile changes resolution without editing Python.
-* Contradictory overrides and missing required configuration are rejected before provider contact.
-* Authentication and named-route protections remain enforced.
-* Existing script/wrapper corrections still work.
+If a stage fails, identify the first failing stage and the smallest evidence-supported correction. Do not make unrelated source changes.
 
-Replace tests that only enforce Python/YAML duplication with behavioral assertions. Do not weaken safety assertions to make tests pass.
-
-Run the directly affected test set. Preserve the documented seven pre-existing full-suite failures as a separate baseline; do not expand this task into repairing them or claim the full suite is green.
-
-Finish with a concise inline report: changed files, the decisive resolver/loader diff excerpts, configuration and validation flow, actual test results, and unresolved items. Update only directly affected documentation.
-
-Implement the bounded correction without further routine confirmation. Do not deploy, contact real providers, merge, or publish. Local test success is not server validation.
+Separate local checks, real PAT results, and unresolved backup behavior. Do not execute anything in PROD, merge, publish, or claim production readiness.
