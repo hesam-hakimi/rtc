@@ -1,41 +1,56 @@
-CLUE — Prepare the current patch for independent review; no further edits
+CLUE — Complete the configuration correction locally with minimal changes
 
-Pause implementation and preserve the current working tree. Prepare a review bundle of the environment/endpoint changes so the actual code can be reviewed before deciding on another correction.
+Continue the current endpoint repair. The owner cannot transfer repository files. Perform the source review and bounded correction locally, then show the important evidence directly in your response. Do not request another upload or create another review bundle.
 
-This task is read-only for project files. Do not revert changes, refactor, change configuration, commit, push, deploy, or contact real providers.
+Use one writer with sequential edits. Preserve the current working tree and all valid completed fixes. The recorded snapshot is TD-Universe/W001CLUEInitialRepo, branch hot-fixes-release-candidate, HEAD 8c81051 plus the existing patch. Verify the current state and preserve any newer changes.
 
-1. Identify the exact snapshot.
-    Record repository, branch, HEAD commit, working-tree status, and changed-file statistics. Include the known pre-change baseline if available; explicitly state if it is unknown.
+The owner’s requirement is:
+Approved environment configuration must be the single source of concrete endpoint URLs and API paths. Updating an approved endpoint must not also require editing a Python registry.
 
-Export the complete current patch, covering staged and unstaged changes. Include relevant new/untracked source and test files separately because ordinary git diff does not include them. Do not omit changes merely because they were made earlier in this session.
+Your review notes establish that:
 
-2. Include the current files needed to trace behavior.
-    Locate and copy:
+* ROUTES duplicates YAML values and enforces agreement; no independently governed destination-allowlist requirement was found.
+* Normal scheduled execution invokes clue.batch directly. The integration script is executed by the verification path.
+* Existing runtime-context and cross-environment checks already participate in configuration resolution.
 
-* tungsten_route.py, including ROUTES, apply(), and route exceptions.
-* config.py and the relevant environment-selection/override logic.
-* batch.py and envsettings.py.
-* clue_dev_integration.sh and clue_dev_verify.sh.
-* Relevant installer/operational-wrapper files showing whether the integration script is packaged, checked for existence, or actually executed.
-* DEV, PAT, and PROD YAML profiles and the relevant deployment .conf files.
-* Changed tests and the relevant changed documentation.
+Confirm those findings against the current source, then implement the smallest correction:
 
-Use a manifest with repository-relative paths. Export copies only. Exclude credentials, private keys, certificates, .env files, Vault output, and business data. Redact secret values in exported copies while preserving configuration keys, non-secret endpoints, and code structure. Record any redactions or omissions.
+1. Remove duplicated endpoint data.
+    Replace the concrete DEV/PAT/PROD endpoint/path entries in tungsten_route.py with resolution from the selected environment’s existing approved configuration through the central loader.
 
-3. Provide a short evidence-based explanation.
-    With file/function references, answer:
+Keep route identifiers and authentication/protocol rules in code where appropriate. Preserve PROD’s named-route requirement. Do not move the same endpoint dictionary elsewhere, introduce another configuration file, or add a second loader.
 
-* What is the actual call path for installation, verification, and normal scheduled batch execution? Distinguish file presence from invocation.
-* Is the Python ROUTES table an independently governed destination allowlist or a duplicate of YAML? Identify supporting requirements, or state that none were found.
-* In what order are profile values and overrides resolved and validated?
-* Exactly where does the forced rahona-workbook-testcase profile block PROD, and does that affect normal batch execution or only verification?
-* Which PAT/PROD backup API details remain unverified, and what repository evidence supports that conclusion?
+2. Preserve meaningful validation.
+    Trace the flow from installed environment selection through profile loading, argument overrides, route resolution, and provider construction.
 
-Do not redesign anything while answering.
+Retain the trusted selected-profile values separately from effective override values where validation requires that distinction. Reject contradictions in endpoint, path, environment, or authentication according to the existing contract.
 
-4. Include existing verification evidence.
-    Attach the actual available test summaries and commands for this snapshot. If the previously running full suite has completed, include its final result; otherwise mark it pending. Do not repeat the full suite solely to prepare this bundle. Separate reported results from results supported by retained output.
+Do not simply delete TungstenRouteConflict checks or make them compare two copies of the same already-overridden values. Preserve runtime-marker/profile consistency, missing-configuration rejection, and protection against cross-environment requests. No silent DEV fallback.
 
-Create one ZIP in an accessible output folder outside the tracked source tree. Include the patch, current source/configuration copies, manifest, brief review notes, and test evidence. Do not upload it to an external service.
+Make the normal runtime and verification path resolve and report the same effective destination for the same configuration.
 
-Return the exact ZIP path and a concise list of anything missing. This is an evidence-export task, not authorization for further implementation.
+3. Preserve completed work and keep the scope narrow.
+    Keep the removal of script endpoint pins, invalid output-format argument, prohibited credential-rotation flag, and forced Symcor identity overrides.
+
+Do not modify approved YAML values, business processing, retries/failover behavior, secrets retrieval, TLS, sudo requirements, CI/CD, or packaging. Keep provider-mode semantics unchanged.
+
+Do not change rahona-workbook-testcase or bypass PROD’s synthetic-profile protection in this patch. Document that its existing limitation affects live verification, not the normal scheduled path.
+
+PAT/PROD backup APIM operation paths remain unverified. Preserve the supplied configuration, do not append a guessed operation, and keep that uncertainty separate from successful local resolution.
+
+4. Verify behavior with focused tests.
+    Demonstrate through the real loader and mocked request/command capture:
+
+* Each environment resolves its configured primary and backup settings.
+* Changing an endpoint/path in an isolated test profile changes resolution without editing Python.
+* Contradictory overrides and missing required configuration are rejected before provider contact.
+* Authentication and named-route protections remain enforced.
+* Existing script/wrapper corrections still work.
+
+Replace tests that only enforce Python/YAML duplication with behavioral assertions. Do not weaken safety assertions to make tests pass.
+
+Run the directly affected test set. Preserve the documented seven pre-existing full-suite failures as a separate baseline; do not expand this task into repairing them or claim the full suite is green.
+
+Finish with a concise inline report: changed files, the decisive resolver/loader diff excerpts, configuration and validation flow, actual test results, and unresolved items. Update only directly affected documentation.
+
+Implement the bounded correction without further routine confirmation. Do not deploy, contact real providers, merge, or publish. Local test success is not server validation.
