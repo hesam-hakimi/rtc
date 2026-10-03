@@ -1,29 +1,37 @@
 
-CLUE — Build a fresh test package and upload it to DEV
+CLUE — Symcor investigation only; strictly no changes
 
-Continue from the current working tree. Build a new test deployment package containing the latest installer and environment/configuration fixes, then upload it to the existing DEV server.
+Replace the previous Symcor review instructions with this request.
 
-This request authorizes building and uploading the package. Installation and execution will be the next step.
+Investigate the existing Symcor implementation and configuration for DEV, PAT, and PROD. Another session is preparing the deployment package; do not interfere with it.
 
-* Read the current packaging instructions and use the existing test-package generator/procedure. Include the intended uncommitted changes; do not accidentally build only from HEAD.
-* Record repository, branch, commit, and the included working-tree changes. Use a unique test-build identifier and filename so the previous package remains available.
-* Package the intended Deliverables payload in the exact structure expected by the current installer. Preserve required runtime dependencies. Exclude credentials, private keys, runtime secrets output, and unrelated generated files.
-* Keep this a test build. Do not change application logic, approved environment settings, CI/CD, pom.xml, or the official release version merely to create the package.
-* Perform the existing lightweight package checks: expected layout, required installer/runtime files, and archive readability. Reuse the latest test evidence; do not start another broad audit or full-suite run.
-* Generate a SHA-256 sidecar.
-* Upload the archive and checksum to the established DEV staging location using the existing authorized account and transfer method. Use a separate filename/location from the active installation. Preserve previous packages and the running application.
-* Verify the remote file size and SHA-256 against the local artifact. Report upload success only after verification.
-* Do not attempt PAT/PROD access, publish an official release, commit, merge, extract over the active installation, install, or run the application. Do not introduce new sudo/root requirements.
+This task permits reading only.
 
-If the DEV destination is not established in the current session or repository instructions, identify the exact missing host/account/path without guessing. Complete the local build first.
+Do not:
 
-Return a concise handoff:
+* Modify, create, delete, rename, copy, or format any file, including temporary files and reports.
+* Run tests, application code, scripts, builds, installers, or commands that generate files or caches.
+* Change Git state, fetch, switch branches, stash, commit, or merge.
+* Connect to servers, Vault, Symcor, or other providers.
+* Implement fixes or make automatic corrections.
 
-1. Test-build identifier and source snapshot.
-2. Local archive path.
-3. DEV hostname and uploaded archive path.
-4. File size, SHA-256, and remote verification result.
-5. The exact next installation command from the current supported procedure, without executing it.
-6. Any known limitations carried into this test build.
+Use only read-only inspection of the current source, configuration, documentation, Git diff, existing tests, and already available test output.
 
-The result should be a verified DEV-uploaded package ready for the next installer check.
+Investigate:
+
+1. The actual execution path from environment selection and configuration loading to Symcor client construction and SOAP request handling. Distinguish scheduled execution from verification scripts.
+2. For each environment, identify the configured endpoint, client ID, component, certificate/CA sources, certificate-host restrictions, TLS behavior, and provider mode. Describe secret sources without retrieving or displaying secret values.
+3. Identify configuration precedence, remaining hardcoded overrides, possible DEV fallback, missing-setting behavior, and whether the reported destination matches the destination used by the client. Check host and SOAP-path handling.
+4. Inspect existing SOAP request construction, response/image parsing, and relevant tests. Explain what the existing evidence covers and what remains unverified. Do not execute anything to obtain additional evidence.
+
+PAT and PROD may intentionally share a Symcor host; judge each environment against its own approved configuration.
+
+Return the findings directly in the conversation:
+
+* A concise DEV/PAT/PROD comparison.
+* Confirmed issues with file/function/line references.
+* Suspected issues clearly separated from confirmed findings.
+* Existing test evidence, explicitly identified as previously recorded.
+* Minimal suggested corrections as text only.
+
+Do not create a report file or ZIP. Stop after presenting the investigation. No implementation changes are authorized by this request.
