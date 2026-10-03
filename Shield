@@ -1,37 +1,57 @@
 
-CLUE — Symcor investigation only; strictly no changes
+CLUE — Fix Symcor endpoint validation and reporting only
 
-Replace the previous Symcor review instructions with this request.
+Implement a minimal correction for finding C3 from the read-only Symcor investigation. First verify the finding against the current source; previous reports are evidence to check, not a substitute for reading the code.
 
-Investigate the existing Symcor implementation and configuration for DEV, PAT, and PROD. Another session is preparing the deployment package; do not interfere with it.
+Problem reported:
 
-This task permits reading only.
+* The client sends requests to the effective args.symcor_url.
+* The run summary reports the configured profile destination.
+* assert_no_cross_environment_override compares only hostnames, allowing a different path on the same host to pass.
 
-Do not:
+Required changes:
 
-* Modify, create, delete, rename, copy, or format any file, including temporary files and reports.
-* Run tests, application code, scripts, builds, installers, or commands that generate files or caches.
-* Change Git state, fetch, switch branches, stash, commit, or merge.
-* Connect to servers, Vault, Symcor, or other providers.
-* Implement fixes or make automatic corrections.
+1. Validate the effective Symcor endpoint against the selected environment profile.
+    * In the existing installed/profile-based execution path, compare scheme, hostname, effective port, and path.
+    * Allow harmless equivalences such as hostname case and an omitted default HTTPS port.
+    * Preserve path case and meaningful path differences. Do not decode, rewrite, or remove path segments to make mismatches pass.
+    * Reject a conflicting override through the existing configuration-error mechanism before provider contact.
+    * Compare against the independently loaded profile value, not a copy of the already-overridden arguments.
+    * Keep this change specific to Symcor; do not change Tungsten validation.
+2. Report the effective destination.
+    * Report the sanitized endpoint actually supplied to SymcorCoreAdapter, including enough information to distinguish scheme, host, port, and path.
+    * Preserve existing profile/provenance reporting and established summary fields where possible; clearly distinguish configured and effective destinations.
+    * Reuse existing sanitization. Do not expose credentials, tokens, or sensitive query values.
+    * Ensure reporting and request construction use the same resolved endpoint.
 
-Use only read-only inspection of the current source, configuration, documentation, Git diff, existing tests, and already available test output.
+Strict boundaries:
 
-Investigate:
+* Do not modify any YAML or deployment .conf file.
+* Do not change endpoints, client IDs, component names, image ordering, SOAP payloads, retries, TLS/mTLS, secrets handling, or provider-mode behavior.
+* PAT and PROD may legitimately share configured Symcor values. Do not invent a requirement that they differ.
+* Do not address the other investigation findings or introduce a new validation framework.
+* Preserve all existing unrelated work.
+* No server access, provider calls, installation, deployment, publishing, commits, or pushes.
 
-1. The actual execution path from environment selection and configuration loading to Symcor client construction and SOAP request handling. Distinguish scheduled execution from verification scripts.
-2. For each environment, identify the configured endpoint, client ID, component, certificate/CA sources, certificate-host restrictions, TLS behavior, and provider mode. Describe secret sources without retrieving or displaying secret values.
-3. Identify configuration precedence, remaining hardcoded overrides, possible DEV fallback, missing-setting behavior, and whether the reported destination matches the destination used by the client. Check host and SOAP-path handling.
-4. Inspect existing SOAP request construction, response/image parsing, and relevant tests. Explain what the existing evidence covers and what remains unverified. Do not execute anything to obtain additional evidence.
+Keep this patch separate from the package currently being built/uploaded. If that session still uses the shared source tree, work in an isolated copy containing the current candidate, including its uncommitted fixes. Do not change or replace that package.
 
-PAT and PROD may intentionally share a Symcor host; judge each environment against its own approved configuration.
+Focused local verification:
 
-Return the findings directly in the conversation:
+* For DEV, PAT, and PROD, the unchanged profile endpoint passes and reaches the client construction unchanged.
+* Same-host/different-path overrides are rejected.
+* Scheme, hostname, and non-default-port mismatches are rejected; harmless hostname-case/default-port equivalences pass.
+* Rejection happens before provider contact.
+* The summary’s sanitized effective destination matches the endpoint given to the client.
+* Reporting does not expose credential or token values.
 
-* A concise DEV/PAT/PROD comparison.
-* Confirmed issues with file/function/line references.
-* Suspected issues clearly separated from confirmed findings.
-* Existing test evidence, explicitly identified as previously recorded.
-* Minimal suggested corrections as text only.
+Use local stubs/mocks; no external network calls. Exercise the relevant loader/argument-to-client path, not only a comparison helper. Run the affected tests and stop once this bounded change is sufficiently verified. Do not modify unrelated failing tests.
 
-Do not create a report file or ZIP. Stop after presenting the investigation. No implementation changes are authorized by this request.
+Report:
+
+* Root cause verified in the current source.
+* Files changed specifically for this task.
+* Exact test commands and results, including any failures.
+* Confirmation that YAML and .conf files are unchanged.
+* Any remaining limitation.
+
+Describe success as local code verification only, not proof of PAT/PROD connectivity or provider acceptance.
