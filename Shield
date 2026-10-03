@@ -1,44 +1,29 @@
 
-CLUE — Verify the current candidate with one controlled real PAT run
+CLUE — Build a fresh test package and upload it to DEV
 
-Continue from the completed endpoint/configuration correction. The owner authorizes a bounded functional test in PAT using the normal operational execution path.
+Continue from the current working tree. Build a new test deployment package containing the latest installer and environment/configuration fixes, then upload it to the existing DEV server.
 
-Work in English. Preserve current changes. Do not restart the configuration redesign.
+This request authorizes building and uploading the package. Installation and execution will be the next step.
 
-1. Identify the actual candidate and PAT runtime.
-    Record the repository, branch, commit, and relevant uncommitted changes. Confirm which version is installed on the PAT server; do not accidentally test an older build.
+* Read the current packaging instructions and use the existing test-package generator/procedure. Include the intended uncommitted changes; do not accidentally build only from HEAD.
+* Record repository, branch, commit, and the included working-tree changes. Use a unique test-build identifier and filename so the previous package remains available.
+* Package the intended Deliverables payload in the exact structure expected by the current installer. Preserve required runtime dependencies. Exclude credentials, private keys, runtime secrets output, and unrelated generated files.
+* Keep this a test build. Do not change application logic, approved environment settings, CI/CD, pom.xml, or the official release version merely to create the package.
+* Perform the existing lightweight package checks: expected layout, required installer/runtime files, and archive readability. Reuse the latest test evidence; do not start another broad audit or full-suite run.
+* Generate a SHA-256 sidecar.
+* Upload the archive and checksum to the established DEV staging location using the existing authorized account and transfer method. Use a separate filename/location from the active installation. Preserve previous packages and the running application.
+* Verify the remote file size and SHA-256 against the local artifact. Report upload success only after verification.
+* Do not attempt PAT/PROD access, publish an official release, commit, merge, extract over the active installation, install, or run the application. Do not introduce new sudo/root requirements.
 
-If installation is needed, use the established PAT installation procedure for this candidate. Preserve environment configuration and existing privilege restrictions. Do not publish a release or modify CI/CD.
+If the DEV destination is not established in the current session or repository instructions, identify the exact missing host/account/path without guessing. Complete the local build first.
 
-Use the actual PAT environment and authorized runtime account. Do not relabel a DEV execution as PAT. If access or a required test input is unavailable, report the specific blocker and complete the available configuration checks.
+Return a concise handoff:
 
-2. Confirm destinations through the normal runtime.
-    Use clue_operational_wrapper.sh and the existing central loader.
+1. Test-build identifier and source snapshot.
+2. Local archive path.
+3. DEV hostname and uploaded archive path.
+4. File size, SHA-256, and remote verification result.
+5. The exact next installation command from the current supported procedure, without executing it.
+6. Any known limitations carried into this test build.
 
-Before provider contact, record the selected environment, configuration source, and effective full Symcor and Tungsten destinations, including primary/backup paths and authentication modes. Confirm the marker, deployment profile, and YAML consistently select PAT.
-
-Use current approved configuration as the reference. Do not manually export endpoint overrides or copy URLs into code.
-
-3. Handle the unresolved backup explicitly.
-    The PAT APIM backup operation path remains unverified. Do not guess an operation suffix or silently substitute DEV settings.
-
-A primary-only live test is acceptable only through an existing supported and authorized option; clearly record that backup behavior was not tested. Do not silently disable failover or change its policy. If no such option exists and the backup destination cannot be confirmed, report that specific live-test blocker instead of making speculative requests.
-
-4. Execute one bounded real scenario.
-    Use an existing authorized PAT test workbook and the supported intake/output workflow. Limit processing to that test input; do not process an unrelated backlog.
-
-Use real Symcor and Tungsten services, with simulation disabled and the existing secrets/TLS mechanisms. Do not use clue_dev_integration.sh’s forced synthetic profile as the normal operational test path.
-
-Trace:
-Input receipt → Symcor retrieval → image preparation → Tungsten processing → enriched Excel → configured PAT output delivery.
-
-If transport through the actual mailbox cannot be exercised, identify the exact tested start/end points and do not claim complete transport validation.
-
-Preserve duplicate-request protection. Do not blindly rerun a request whose provider outcome is unknown.
-
-5. Report evidence and stop at this scope.
-    Report the actual exit status, stage results, input/output counts, row-association issues, workbook-contract checks, and output/log locations. Do not expose credentials or business data in the report.
-
-If a stage fails, identify the first failing stage and the smallest evidence-supported correction. Do not make unrelated source changes.
-
-Separate local checks, real PAT results, and unresolved backup behavior. Do not execute anything in PROD, merge, publish, or claim production readiness.
+The result should be a verified DEV-uploaded package ready for the next installer check.
