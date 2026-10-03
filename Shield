@@ -1,38 +1,9 @@
-CLUE — Complete the bounded environment compatibility fix
+Continue the bounded repair already authorized. This report still shows the original three-file patch and leaves the follow-up work outstanding.
 
-Continue from your current endpoint-override patch. The owner authorizes minimal corrections for the remaining issues identified in your report. Preserve the completed fix and all unrelated owner changes.
+Preserve tungsten_route.apply() conflict validation and PROD’s named-route requirement. Correct the route definitions/resolution to match each environment’s existing approved configuration, including applicable primary and backup paths and authentication modes. Do not remove route validation, remove PROD’s route name, or introduce DEV fallback.
 
-Use one implementation writer with sequential edits. Work in English. Check the current repository instructions and relevant files before editing; identify the repository, branch, and commit in your report.
+Distinguish an internal route-mapping defect from genuinely missing API information. Use verified repository configuration and documentation; do not invent endpoints or authentication details. If a specific value or external approval is genuinely missing, identify exactly which one and its source requirement. Continue the other authorized corrections independently.
 
-1. Establish the origin of the eight failures.
-    Reproduce the reported failures against the pre-patch implementation in an isolated temporary copy, using the same current YAML profiles, dependencies, and test command. Do not reset or overwrite the active working tree.
+Complete the remaining script/wrapper fixes for the prohibited credential-rotation flag and forced Symcor identity overrides, preserving existing security policy. Update the stale documentation and reconcile the affected tests with evidence.
 
-Compare failing test IDs and failure reasons before and after the patch. Git status alone does not prove that failures are pre-existing. If the exact baseline cannot be reconstructed, mark attribution unverified.
-
-2. Resolve the Tungsten route/configuration mismatch.
-    Inspect the existing route resolver and the approved DEV, PAT, and PROD profiles. Make the smallest change needed for route resolution to use the selected environment’s approved configuration consistently.
-
-A missing PAT/PROD entry in ROUTES does not automatically mean the endpoint is unknown: first reconcile the URLs and route metadata already present in the repository.
-
-Preserve route validation, authentication behavior, and cross-environment protection. Do not bypass validation, duplicate environment URLs in executable code, or guess missing hosts, paths, or authentication details. If required information is genuinely absent, identify the exact missing field and complete the other fixes.
-
-3. Correct the credential-rotation invocation.
-    The shared script must not unconditionally pass --credential-rotation-deferred into environments where existing policy prohibits it. Adapt the invocation to the established environment policy while preserving valid DEV behavior.
-
-Do not weaken the policy, change credential retrieval, or introduce additional sudo requirements.
-
-4. Correct forced Symcor identity overrides.
-    Trace --symcor-client-id and --symcor-component through the integration script, clue_dev_verify.sh, and the existing loader.
-
-Remove unnecessary shell-to-CLI promotion that overrides the selected environment’s configured identity. Align the wrapper’s checks with the existing configuration resolution so that valid profile values do not require duplicate shell exports. Preserve supported explicit overrides and their documented validation.
-
-5. Reconcile the directly affected tests and documentation.
-    Update stale test expectations only where current approved configuration proves they are outdated. Preserve meaningful assertions; do not skip, delete, or weaken tests to obtain a passing result.
-
-Correct the stale statement in CLUE_HANDOFF.md about explicitly exported route values.
-
-Keep changes limited to these scripts, the necessary route/configuration resolution code, directly affected tests, and the relevant documentation paragraph. Preserve approved YAML values, business processing, payloads, retries, simulation policy, TLS verification, secrets handling, CI/CD, and packaging. Keep provider-mode dev unchanged because it selects the real adapters.
-
-Run the previously affected test set and focused checks for all three environments, including missing configuration and cross-environment rejection, without real provider calls. Report actual results, any remaining failures, and a concise explanation of every changed file.
-
-Complete this bounded repair without deploying, merging, publishing, or claiming server validation or production readiness.
+The owner has already authorized these limited code corrections. Keep the scope narrow and report implementation results, not another restatement of the same blockers. Keep local loader/test success separate from real server execution.
